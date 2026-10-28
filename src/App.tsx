@@ -61,14 +61,14 @@ export default function App() {
             plan={plan}
             sessions={sessions}
             settings={settings}
-            targetDays={profile.days}
+            targetDays={plan.days.length}
             justFinished={justFinished}
             onDismissFinished={() => setJustFinished(null)}
           />
         )}
         {tab === 'progreso' && (
           <Suspense fallback={null}>
-            <Progress sessions={sessions} targetDays={profile.days} />
+            <Progress sessions={sessions} targetDays={plan.days.length} />
           </Suspense>
         )}
         {tab === 'ajustes' && <SettingsScreen plan={plan} profile={profile} settings={settings} notes={notes} onRedoSurvey={() => setRedo(true)} />}

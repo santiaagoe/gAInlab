@@ -1,4 +1,4 @@
-import type { Equipment, Exercise, Injury, Muscle, Slot } from './types'
+import type { CustomExercise, Equipment, Exercise, Injury, Muscle, Slot } from './types'
 
 const ALL: Equipment[] = ['gimnasio', 'basico', 'casa']
 const BAR: Equipment[] = ['gimnasio', 'basico']
@@ -19,11 +19,14 @@ export const EXERCISES: Exercise[] = [
   { id: 'rumano-mancuernas', name: 'Peso muerto rumano con mancuernas', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['espalda'] },
   { id: 'hip-thrust-mancuerna', name: 'Hip thrust con mancuerna', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, muscles: ['gluteo', 'femoral'] },
 
+  { id: 'peso-muerto', name: 'Peso muerto convencional', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'], muscles: ['femoral', 'gluteo', 'espalda'] },
+
   // Press horizontal
   { id: 'banca-barra', name: 'Press banca con barra', slot: 'pressHorizontal', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
   { id: 'banca-mancuernas', name: 'Press banca con mancuernas', slot: 'pressHorizontal', kind: 'mancuerna', equip: ALL, compound: true },
   { id: 'press-pecho-maquina', name: 'Press de pecho en máquina', slot: 'pressHorizontal', kind: 'maquina', equip: GYM, compound: true },
   { id: 'inclinado-mancuernas', name: 'Press inclinado con mancuernas', slot: 'pressHorizontal', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'inclinado-barra', name: 'Press inclinado con barra', slot: 'pressHorizontal', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
   { id: 'flexiones', name: 'Flexiones', slot: 'pressHorizontal', kind: 'corporal', equip: ALL, compound: true },
 
   // Press vertical
@@ -37,6 +40,7 @@ export const EXERCISES: Exercise[] = [
   { id: 'remo-barra', name: 'Remo con barra', slot: 'remo', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
   { id: 'remo-polea', name: 'Remo en polea baja', slot: 'remo', kind: 'maquina', equip: GYM, compound: true },
   { id: 'remo-mancuerna', name: 'Remo con mancuerna a una mano', slot: 'remo', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'remo-t', name: 'Remo en barra T', slot: 'remo', kind: 'barra', equip: BAR, compound: true },
   { id: 'remo-pecho-apoyado', name: 'Remo con pecho apoyado', slot: 'remo', kind: 'mancuerna', equip: ALL, compound: true },
 
   // Tirón vertical
@@ -65,13 +69,16 @@ export const EXERCISES: Exercise[] = [
   { id: 'aperturas-mancuernas', name: 'Aperturas con mancuernas', slot: 'pecho', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'] },
   { id: 'cruce-poleas', name: 'Cruce de poleas', slot: 'pecho', kind: 'maquina', equip: GYM, compound: false },
   { id: 'elevaciones-laterales', name: 'Elevaciones laterales', slot: 'lateral', kind: 'mancuerna', equip: ALL, compound: false },
+  { id: 'face-pull', name: 'Face pull en polea', slot: 'lateral', kind: 'maquina', equip: GYM, compound: false, muscles: ['hombro', 'espalda'] },
   { id: 'laterales-polea', name: 'Elevaciones laterales en polea', slot: 'lateral', kind: 'maquina', equip: GYM, compound: false },
   { id: 'curl-mancuernas', name: 'Curl de bíceps con mancuernas', slot: 'biceps', kind: 'mancuerna', equip: ALL, compound: false },
   { id: 'curl-barra', name: 'Curl de bíceps con barra', slot: 'biceps', kind: 'barra', equip: BAR, compound: false },
+  { id: 'curl-predicador', name: 'Curl predicador', slot: 'biceps', kind: 'maquina', equip: GYM, compound: false },
   { id: 'curl-martillo', name: 'Curl martillo', slot: 'biceps', kind: 'mancuerna', equip: ALL, compound: false },
   { id: 'triceps-polea', name: 'Extensión de tríceps en polea', slot: 'triceps', kind: 'maquina', equip: GYM, compound: false },
   { id: 'frances-mancuernas', name: 'Press francés con mancuernas', slot: 'triceps', kind: 'mancuerna', equip: ALL, compound: false },
   { id: 'triceps-sobre-cabeza', name: 'Extensión de tríceps sobre la cabeza', slot: 'triceps', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'] },
+  { id: 'fondos', name: 'Fondos en paralelas', slot: 'triceps', kind: 'corporal', equip: BAR, compound: true, avoid: ['hombro'], muscles: ['triceps', 'pecho', 'hombro'] },
 ]
 
 const SLOT_MUSCLES: Record<Slot, Muscle[]> = {
@@ -126,6 +133,45 @@ export function isAvoided(exercise: Exercise, injuries: Injury[]): Injury[] {
 }
 
 const BY_ID = new Map(EXERCISES.map((e) => [e.id, e]))
+let CUSTOM: Exercise[] = []
+
+/** Slot used for a user-made exercise, from the muscle it mainly trains. */
+const SLOT_FOR_MUSCLE: Record<Muscle, Slot> = {
+  pecho: 'pecho',
+  espalda: 'remo',
+  hombro: 'lateral',
+  cuadriceps: 'cuadriceps',
+  gluteo: 'bisagra',
+  femoral: 'femoral',
+  gemelo: 'gemelo',
+  biceps: 'biceps',
+  triceps: 'triceps',
+}
+
+export function fromCustom(c: CustomExercise): Exercise {
+  return {
+    id: c.id,
+    name: c.name,
+    slot: SLOT_FOR_MUSCLE[c.muscle],
+    kind: c.kind,
+    equip: ['gimnasio', 'basico', 'casa'],
+    compound: c.compound,
+    muscles: [c.muscle],
+    custom: true,
+  }
+}
+
+/** Makes the user's own exercises available everywhere the library is used. */
+export function registerCustomExercises(list: CustomExercise[]) {
+  CUSTOM.forEach((e) => BY_ID.delete(e.id))
+  CUSTOM = list.map(fromCustom)
+  CUSTOM.forEach((e) => BY_ID.set(e.id, e))
+}
+
+/** Library plus the user's own exercises. */
+export function allExercises(): Exercise[] {
+  return [...CUSTOM, ...EXERCISES]
+}
 
 export function getExercise(id: string): Exercise {
   const ex = BY_ID.get(id)

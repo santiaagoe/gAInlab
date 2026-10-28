@@ -1,8 +1,23 @@
 import { useState } from 'react'
-import { getExercise } from '../engine/exercises'
+import { PlanEditor } from '../components/PlanEditor'
 import { buildPlan } from '../engine/plan'
-import type { Equipment, Experience, Goal, Injury, Profile, Situation } from '../engine/types'
-import { actions } from '../store'
+import { emptyDays, emptyPlan } from '../engine/planEdit'
+import type { Equipment, Experience, Goal, Injury, Plan, Profile, Situation } from '../engine/types'
+import { actions, useApp } from '../store'
+
+type Mode = 'generar' | 'propio'
+
+type Step = 'modo' | 'goal' | 'experience' | 'situation' | 'days' | 'minutes' | 'equipment' | 'injuries' | 'plan' | 'builder'
+
+const FLOWS: Record<Mode, Step[]> = {
+  generar: ['modo', 'goal', 'experience', 'situation', 'days', 'minutes', 'equipment', 'injuries', 'plan'],
+  propio: ['modo', 'goal', 'days', 'equipment', 'injuries', 'builder'],
+}
+
+const MODES: Option<Mode>[] = [
+  { value: 'generar', label: 'Arma un plan para mí', hint: 'Respondes 7 preguntas y te propongo una rutina que puedes ajustar' },
+  { value: 'propio', label: 'Ya tengo un plan', hint: 'Copias tu rutina y gAInlab calcula el peso de cada sesión' },
+]
 
 interface Option<T> {
   value: T
@@ -45,6 +60,7 @@ const INJURIES: Option<Injury>[] = [
 ]
 
 interface Draft {
+  mode?: Mode
   goal?: Goal
   experience?: Experience
   situation?: Situation
@@ -54,34 +70,57 @@ interface Draft {
   injuries: Injury[]
 }
 
-const STEPS = 8
-
 export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?: () => void }) {
-  const [step, setStep] = useState(0)
+  const { notes } = useApp()
+  const [index, setIndex] = useState(0)
   const [draft, setDraft] = useState<Draft>(initial ? { ...initial } : { injuries: [] })
+  const [plan, setPlan] = useState<Plan | null>(null)
+  const [planKey, setPlanKey] = useState('')
+  const [tried, setTried] = useState(false)
 
-  const choose = <K extends keyof Draft>(key: K, value: Draft[K]) => {
-    setDraft((d) => ({ ...d, [key]: value }))
-    setStep((s) => s + 1)
+  const flow = FLOWS[draft.mode ?? 'generar']
+  const step = flow[index]
+  const own = draft.mode === 'propio'
+
+  const profile = profileFrom(draft, initial)
+
+  /** Moves to a step, preparing the plan draft when reaching the last one. */
+  const goTo = (next: number, nextDraft: Draft = draft) => {
+    const nextFlow = FLOWS[nextDraft.mode ?? 'generar']
+    const target = nextFlow[next]
+    if (target === 'plan' || target === 'builder') {
+      const p = profileFrom(nextDraft, initial)
+      if (p) {
+        // Regenerate only if the answers that shape the plan changed, so edits survive going back and forth.
+        const key = target === 'plan' ? JSON.stringify({ ...p, createdAt: '' }) : `propio-${p.days}`
+        if (key !== planKey || !plan) {
+          if (target === 'plan' || !plan?.custom) setPlan(target === 'plan' ? buildPlan(p) : emptyPlan(p.days))
+          setPlanKey(key)
+        }
+      }
+    }
+    setTried(false)
+    setIndex(next)
+    window.scrollTo({ top: 0 })
   }
 
-  const profile: Profile | null =
-    draft.goal && draft.experience && draft.situation && draft.days && draft.minutes && draft.equipment
-      ? {
-          goal: draft.goal,
-          experience: draft.experience,
-          situation: draft.situation,
-          days: draft.days,
-          minutes: draft.minutes,
-          equipment: draft.equipment,
-          injuries: draft.injuries,
-          createdAt: initial?.createdAt ?? new Date().toISOString(),
-        }
-      : null
+  const choose = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    const next = { ...draft, [key]: value }
+    setDraft(next)
+    goTo(index + 1, next)
+  }
 
-  const plan = step === 7 && profile ? buildPlan(profile) : null
+  const back = () => (index === 0 ? onCancel?.() : goTo(index - 1))
 
-  const back = () => (step === 0 ? onCancel?.() : setStep((s) => s - 1))
+  const missing = plan ? emptyDays(plan) : []
+  const start = () => {
+    if (!profile || !plan) return
+    if (step === 'builder' && missing.length > 0) {
+      setTried(true)
+      return
+    }
+    actions.completeOnboarding(profile, plan)
+  }
 
   return (
     <div className="ob">
@@ -90,44 +129,55 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
           g<b>AI</b>nlab
         </span>
         <span className="muted small num">
-          {Math.min(step + 1, STEPS)} de {STEPS}
+          {index + 1} de {flow.length}
         </span>
       </div>
       <div className="ob-progress" aria-hidden>
-        <span style={{ width: `${(Math.min(step + 1, STEPS) / STEPS) * 100}%` }} />
+        <span style={{ width: `${((index + 1) / flow.length) * 100}%` }} />
       </div>
 
-      {step === 0 && (
-        <Question title="¿Qué quieres lograr?">
+      {step === 'modo' && (
+        <Question title="¿Cómo quieres empezar?">
+          <Choices options={MODES} value={draft.mode} onPick={(v) => choose('mode', v)} />
+        </Question>
+      )}
+      {step === 'goal' && (
+        <Question
+          title="¿Qué quieres lograr?"
+          lede={own ? 'Lo usamos para proponer series y repeticiones cuando añadas un ejercicio.' : undefined}
+        >
           <Choices options={GOALS} value={draft.goal} onPick={(v) => choose('goal', v)} />
         </Question>
       )}
-      {step === 1 && (
+      {step === 'experience' && (
         <Question title="¿Cuánta experiencia tienes entrenando?">
           <Choices options={EXPERIENCE} value={draft.experience} onPick={(v) => choose('experience', v)} />
         </Question>
       )}
-      {step === 2 && (
+      {step === 'situation' && (
         <Question title="¿Cuál es tu situación ahora?">
           <Choices options={SITUATION} value={draft.situation} onPick={(v) => choose('situation', v)} />
         </Question>
       )}
-      {step === 3 && (
-        <Question title="¿Cuántos días por semana puedes entrenar?" lede="Elige lo que puedas sostener, no lo ideal.">
+      {step === 'days' && (
+        <Question
+          title={own ? '¿Cuántos días tiene tu plan?' : '¿Cuántos días por semana puedes entrenar?'}
+          lede={own ? 'Después puedes añadir o quitar días.' : 'Elige lo que puedas sostener, no lo ideal.'}
+        >
           <Choices options={DAYS} value={draft.days} onPick={(v) => choose('days', v)} grid />
         </Question>
       )}
-      {step === 4 && (
+      {step === 'minutes' && (
         <Question title="¿Cuántos minutos dura cada sesión?">
           <Choices options={MINUTES} value={draft.minutes} onPick={(v) => choose('minutes', v)} grid />
         </Question>
       )}
-      {step === 5 && (
-        <Question title="¿Dónde entrenas?">
+      {step === 'equipment' && (
+        <Question title="¿Dónde entrenas?" lede={own ? 'Así te mostramos solo los ejercicios que puedes hacer.' : undefined}>
           <Choices options={EQUIPMENT} value={draft.equipment} onPick={(v) => choose('equipment', v)} />
         </Question>
       )}
-      {step === 6 && (
+      {step === 'injuries' && (
         <Question title="¿Tienes molestias en alguna zona?" lede="Puedes marcar varias. Si tienes una lesión, consulta con un profesional.">
           <div className="options">
             {INJURIES.map((o) => {
@@ -151,52 +201,81 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
           </div>
         </Question>
       )}
-      {step === 7 && plan && (
+      {step === 'plan' && plan && profile && (
         <div>
           <p className="muted small">Tu plan</p>
           <h1 className="display" style={{ marginTop: 4 }}>
             {plan.name}
           </h1>
           <p className="lede">{plan.summary}</p>
-          <div className="section">
-            {plan.days.map((day) => (
-              <div className="plan-day" key={day.id}>
-                <h3>{day.name}</h3>
-                <ol>
-                  {day.exercises.map((e) => (
-                    <li key={e.exerciseId}>
-                      <span>{getExercise(e.exerciseId).name}</span>
-                      <span className="num">
-                        {e.sets} × {e.repMin}–{e.repMax}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
+          <div className="note ai" style={{ marginTop: 16 }}>
+            Toca cualquier ejercicio para cambiarlo, ajustar series y repeticiones o quitarlo. También puedes añadir ejercicios y días.
           </div>
+          {plan.edited && (
+            <button className="link" style={{ marginTop: 12 }} onClick={() => setPlan(buildPlan(profile))}>
+              Volver al plan propuesto
+            </button>
+          )}
+          <div className="section">
+            <PlanEditor plan={plan} profile={profile} notes={notes} onChange={setPlan} />
+          </div>
+        </div>
+      )}
+      {step === 'builder' && plan && profile && (
+        <div>
+          <h1 className="ob-q">Copia tu plan</h1>
+          <p className="lede">
+            Añade los ejercicios de cada día con sus series y repeticiones. Toca el nombre de un día para cambiarlo, por ejemplo
+            “Pecho y tríceps”. Si un ejercicio no está en la lista, puedes crearlo.
+          </p>
+          <div className="section">
+            <PlanEditor plan={plan} profile={profile} notes={notes} onChange={setPlan} />
+          </div>
+          {tried && missing.length > 0 && (
+            <div className="note down" style={{ marginTop: 16 }} role="alert">
+              {missing.length === 1
+                ? `${missing[0].name} no tiene ejercicios. Añade al menos uno o quita ese día.`
+                : `${missing.slice(0, -1).map((d) => d.name).join(', ')} y ${missing[missing.length - 1].name} no tienen ejercicios. Añade al menos uno a cada día o quítalos.`}
+            </div>
+          )}
         </div>
       )}
 
       <div className="ob-foot">
-        {(step > 0 || onCancel) && (
+        {(index > 0 || onCancel) && (
           <button className="btn btn-ghost" onClick={back}>
             Atrás
           </button>
         )}
-        {step === 6 && (
-          <button className="btn btn-primary" onClick={() => setStep(7)}>
+        {step === 'injuries' && (
+          <button className="btn btn-primary" onClick={() => goTo(index + 1)}>
             {draft.injuries.length === 0 ? 'Ninguna, continuar' : 'Continuar'}
           </button>
         )}
-        {step === 7 && profile && (
-          <button className="btn btn-primary" onClick={() => actions.completeOnboarding(profile)}>
-            Empezar con este plan
+        {(step === 'plan' || step === 'builder') && profile && (
+          <button className="btn btn-primary" onClick={start}>
+            {step === 'plan' ? 'Empezar con este plan' : 'Empezar con mi plan'}
           </button>
         )}
       </div>
     </div>
   )
+}
+
+function profileFrom(d: Draft, initial?: Profile): Profile | null {
+  const own = d.mode === 'propio'
+  if (!d.goal || !d.days || !d.equipment) return null
+  if (!own && (!d.experience || !d.situation || !d.minutes)) return null
+  return {
+    goal: d.goal,
+    experience: d.experience ?? 'menos1',
+    situation: d.situation ?? 'entreno',
+    days: d.days,
+    minutes: d.minutes ?? 60,
+    equipment: d.equipment,
+    injuries: d.injuries,
+    createdAt: initial?.createdAt ?? new Date().toISOString(),
+  }
 }
 
 function Question({ title, lede, children }: { title: string; lede?: string; children: React.ReactNode }) {

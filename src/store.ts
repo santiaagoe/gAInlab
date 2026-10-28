@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react'
-import { getExercise } from './engine/exercises'
-import { buildPlan, entryFor } from './engine/plan'
+import { getExercise, registerCustomExercises } from './engine/exercises'
+import { buildPlan } from './engine/plan'
+import { replaceExercise } from './engine/planEdit'
 import { historyFor, prescribe } from './engine/progression'
-import type { Feel, Plan, PlanDay, PlanExercise, Prescription, Profile, Session, SetLog, Settings } from './engine/types'
+import type { CustomExercise, Feel, Kind, Muscle, Plan, PlanDay, PlanExercise, Prescription, Profile, Session, SetLog, Settings } from './engine/types'
 
 export interface ActiveExercise {
   plan: PlanExercise
@@ -31,6 +32,8 @@ export interface AppState {
   active?: ActiveSession
   /** Personal notes per exercise (seat height, technique cues...). */
   notes: Record<string, string>
+  /** Exercises the user created because they were not in the library. */
+  customExercises: CustomExercise[]
 }
 
 const KEY = 'gainlab:v1'
@@ -38,7 +41,7 @@ const KEY = 'gainlab:v1'
 const DEFAULT_SETTINGS: Settings = { incBarra: 2.5, incMancuerna: 2, incMaquina: 2.5, sessionView: 'enfoque' }
 
 function initial(): AppState {
-  return { version: 1, sessions: [], settings: DEFAULT_SETTINGS, notes: {} }
+  return { version: 1, sessions: [], settings: DEFAULT_SETTINGS, notes: {}, customExercises: [] }
 }
 
 function load(): AppState {
@@ -46,13 +49,20 @@ function load(): AppState {
     const raw = localStorage.getItem(KEY)
     if (!raw) return initial()
     const parsed = JSON.parse(raw) as AppState
-    return { ...initial(), ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings }, notes: parsed.notes ?? {} }
+    return {
+      ...initial(),
+      ...parsed,
+      settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
+      notes: parsed.notes ?? {},
+      customExercises: parsed.customExercises ?? [],
+    }
   } catch {
     return initial()
   }
 }
 
 let state: AppState = load()
+registerCustomExercises(state.customExercises)
 const listeners = new Set<() => void>()
 
 function persist() {
@@ -64,6 +74,7 @@ function persist() {
 }
 
 function set(next: AppState) {
+  if (next.customExercises !== state.customExercises) registerCustomExercises(next.customExercises)
   state = next
   persist()
   listeners.forEach((l) => l())
@@ -88,8 +99,21 @@ function uid(): string {
 }
 
 export const actions = {
-  completeOnboarding(profile: Profile) {
-    set({ ...state, profile, plan: buildPlan(profile), active: undefined })
+  /** Saves the survey answers with the plan the user approved (generated, edited or built from scratch). */
+  completeOnboarding(profile: Profile, plan: Plan = buildPlan(profile)) {
+    set({ ...state, profile, plan, active: undefined })
+  },
+
+  setPlan(plan: Plan) {
+    set({ ...state, plan })
+  },
+
+  /** Creates an exercise that is not in the library and returns its id. */
+  createExercise(name: string, kind: Kind, muscle: Muscle, compound: boolean): string {
+    const id = `custom-${uid()}`
+    const exercise: CustomExercise = { id, name: name.trim(), kind, muscle, compound }
+    set({ ...state, customExercises: [...state.customExercises, exercise] })
+    return id
   },
 
   updateSettings(settings: Settings) {
@@ -135,23 +159,13 @@ export const actions = {
   swapExercise(exIndex: number, exerciseId: string, inPlan = false) {
     const active = state.active
     if (!active) return
-    if (inPlan) actions.replaceInPlan(active.dayId, exIndex, exerciseId)
+    if (inPlan && state.plan) actions.setPlan(replaceExercise(state.plan, active.dayId, exIndex, exerciseId))
     const exercises = active.exercises.map((ex, i) =>
       i === exIndex ? prepareExercise({ ...ex.plan, slot: getExercise(exerciseId).slot }, exerciseId) : ex,
     )
     set({ ...state, active: { ...active, exercises } })
   },
 
-  /** Permanently replaces one exercise of the routine, keeping its sets, reps and rest. */
-  replaceInPlan(dayId: string, index: number, exerciseId: string) {
-    const plan = state.plan
-    if (!plan) return
-    const slot = getExercise(exerciseId).slot
-    const days = plan.days.map((d) =>
-      d.id !== dayId ? d : { ...d, exercises: d.exercises.map((e, i) => (i === index ? { ...e, exerciseId, slot } : e)) },
-    )
-    set({ ...state, plan: { ...plan, days, edited: true } })
-  },
 
   setCurrent(index: number) {
     const active = state.active
@@ -167,31 +181,8 @@ export const actions = {
     set({ ...state, notes })
   },
 
-  /** Changes sets, rep range or rest of one exercise in the routine. */
-  updatePlanExercise(dayId: string, index: number, patch: Partial<Pick<PlanExercise, 'sets' | 'repMin' | 'repMax' | 'rest'>>) {
-    const plan = state.plan
-    if (!plan) return
-    const days = plan.days.map((d) =>
-      d.id !== dayId ? d : { ...d, exercises: d.exercises.map((e, i) => (i === index ? { ...e, ...patch } : e)) },
-    )
-    set({ ...state, plan: { ...plan, days, edited: true } })
-  },
 
-  removeFromPlan(dayId: string, index: number) {
-    const plan = state.plan
-    if (!plan) return
-    const days = plan.days.map((d) => (d.id !== dayId ? d : { ...d, exercises: d.exercises.filter((_, i) => i !== index) }))
-    set({ ...state, plan: { ...plan, days, edited: true } })
-  },
 
-  addToPlan(dayId: string, exerciseId: string) {
-    const plan = state.plan
-    const profile = state.profile
-    if (!plan || !profile) return
-    const entry = entryFor(profile, getExercise(exerciseId))
-    const days = plan.days.map((d) => (d.id !== dayId ? d : { ...d, exercises: [...d.exercises, entry] }))
-    set({ ...state, plan: { ...plan, days, edited: true } })
-  },
 
   /** Saves corrections to a past session; a session left without sets is removed. */
   replaceSession(session: Session) {
@@ -241,6 +232,7 @@ export const actions = {
       ...data,
       settings: { ...DEFAULT_SETTINGS, ...data.settings },
       notes: data.notes ?? {},
+      customExercises: data.customExercises ?? [],
       active: undefined,
     })
   },

@@ -351,6 +351,51 @@ h3 {
   white-space: nowrap;
 }
 
+.plan-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.day-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  text-align: left;
+}
+
+.day-name .edit-hint,
+.plan-edit .edit-hint {
+  color: var(--ai);
+  font-size: 0.78rem;
+  margin-left: 6px;
+}
+
+.day-rename {
+  flex: 1;
+}
+
+.day-rename .select {
+  height: 42px;
+  font-weight: 650;
+}
+
+.link-muted {
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 6px 0;
+}
+
+.inline-confirm {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--down-soft);
+}
+
 /* ---------- Today ---------- */
 
 .week {
@@ -1026,6 +1071,10 @@ h3 {
   margin-left: 4px;
 }
 
+.chips button:disabled {
+  opacity: 0.35;
+}
+
 .add-exercise {
   margin-top: 6px;
   color: var(--ai);
@@ -1214,6 +1263,10 @@ h3 {
   text-align: left;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
+}
+
+.pick.create .pick-name {
+  color: var(--ai);
 }
 
 .pick:disabled {

@@ -6,7 +6,9 @@ gAInlab es una app web instalable (PWA) para entrenar en el gimnasio con progres
 
 ## Qué hace el MVP
 
-- **Encuesta inicial**: objetivo, experiencia, situación (incluye volver tras una pausa), días por semana, minutos por sesión, equipo y molestias.
+- **Dos formas de empezar**:
+  - *Arma un plan para mí*: encuesta de objetivo, experiencia, situación (incluye volver tras una pausa), días, minutos, equipo y molestias. El plan propuesto se puede editar antes de empezar.
+  - *Ya tengo un plan*: copias tu rutina día por día, con nombres de día propios y ejercicios de la biblioteca o creados por ti.
 - **Rutina por plantillas**: full body (2–3 días), torso/pierna (4), torso/pierna/empuje/tirón (5) o empuje/tirón/pierna (6). Series, rangos y descansos según el objetivo; ejercicios según el equipo y las molestias.
 - **Calibración**: la primera vez que haces un ejercicio anotas un peso cómodo y las repeticiones reales.
 - **Prescripción automática (doble progresión)**:
@@ -17,7 +19,7 @@ gAInlab es una app web instalable (PWA) para entrenar en el gimnasio con progres
   - Modo regreso: tras 2+ semanas sin un ejercicio, baja un 10–30% según la pausa.
 - **Modo entrenamiento**: un ejercicio a la vez, barra con todos los ejercicios y su avance, botón "Siguiente" que se destaca al terminar las series y deslizar para cambiar de ejercicio. También hay vista de lista.
 - **Sesión en el gimnasio**: valores prellenados, serie actual destacada, marcar series con un toque, temporizador de descanso con vibración, series de calentamiento sugeridas y notas por ejercicio.
-- **Rutina editable**: cambiar un ejercicio (solo hoy o en la rutina) con aviso si no trabaja la misma zona, ajustar series, rango y descanso, añadir y quitar ejercicios con aviso si un músculo queda sin trabajo.
+- **Rutina editable**: cambiar un ejercicio (solo hoy o en la rutina) con aviso si no trabaja la misma zona; ajustar series, rango, descanso y orden; añadir y quitar ejercicios y días; crear ejercicios que no están en la biblioteca.
 - **Historial editable**: corregir o borrar sesiones pasadas; las prescripciones se recalculan solas.
 - **Progreso**: constancia por semana, racha de semanas cumplidas y gráfico de fuerza estimada por ejercicio.
 - **Datos locales**: todo se guarda en el celular, con respaldo y restauración en JSON. Funciona sin internet.
@@ -43,6 +45,8 @@ src/
   engine/        # lógica pura y testeada
     exercises.ts # biblioteca de ejercicios por patrón de movimiento
     plan.ts      # encuesta → rutina (plantillas + reglas)
+    planEdit.ts  # ediciones puras del plan (cambiar, añadir, quitar, días)
+    swap.ts      # avisos de zona muscular al cambiar o quitar ejercicios
     progression.ts # calibración, doble progresión, modo regreso
   screens/       # Onboarding, Hoy, Sesión, Progreso, Ajustes
   store.ts       # estado y persistencia en localStorage

@@ -55,6 +55,17 @@ export interface Exercise {
   avoid?: Injury[]
   /** Overrides the slot's default muscles; the first one is the main target. */
   muscles?: Muscle[]
+  /** Created by the user. */
+  custom?: boolean
+}
+
+/** An exercise the user adds when it is not in the library. */
+export interface CustomExercise {
+  id: string
+  name: string
+  kind: Kind
+  muscle: Muscle
+  compound: boolean
 }
 
 export interface PlanExercise {
@@ -80,6 +91,8 @@ export interface Plan {
   days: PlanDay[]
   /** True once the user replaced an exercise by hand. */
   edited?: boolean
+  /** Built by the user from scratch ("Ya tengo un plan"). */
+  custom?: boolean
 }
 
 export interface SetLog {

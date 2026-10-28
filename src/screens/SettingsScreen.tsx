@@ -1,7 +1,5 @@
 import { useRef, useState } from 'react'
-import { ExerciseEditor } from '../components/ExerciseEditor'
-import { AddExercisePicker, ExercisePicker } from '../components/ExercisePicker'
-import { getExercise } from '../engine/exercises'
+import { PlanEditor } from '../components/PlanEditor'
 import type { Plan, Profile, Settings } from '../engine/types'
 import { kg } from '../format'
 import { actions, exportData, type AppState } from '../store'
@@ -21,8 +19,6 @@ const INCREMENTS: { key: 'incBarra' | 'incMancuerna' | 'incMaquina'; label: stri
 ]
 
 export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }: Props) {
-  const [editing, setEditing] = useState<{ dayId: string; index: number; swap?: boolean } | null>(null)
-  const [adding, setAdding] = useState<string | null>(null)
   const [confirmRedo, setConfirmRedo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -69,51 +65,27 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
         <div className="section-head">
           <h2 className="h2">Tu plan</h2>
           <button className="link" onClick={() => (plan.edited ? setConfirmRedo(true) : onRedoSurvey())}>
-            Rehacer encuesta
+            {plan.custom ? 'Cambiar de plan' : 'Rehacer encuesta'}
           </button>
         </div>
         <p style={{ margin: 0, fontWeight: 600 }}>{plan.name}</p>
         <p className="lede small">{plan.summary}</p>
         <div style={{ marginTop: 12 }}>
-          {plan.days.map((day) => (
-            <div className="plan-day" key={day.id}>
-              <h3>{day.name}</h3>
-              <ol>
-                {day.exercises.map((e, i) => (
-                  <li key={e.exerciseId}>
-                    <button
-                      className="plan-edit"
-                      onClick={() => setEditing({ dayId: day.id, index: i })}
-                      aria-label={`Editar ${getExercise(e.exerciseId).name}`}
-                    >
-                      <span>
-                        {getExercise(e.exerciseId).name}
-                        <span className="edit-hint">Editar</span>
-                      </span>
-                      <span className="num">
-                        {e.sets} × {e.repMin}–{e.repMax}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              <button className="add-exercise" onClick={() => setAdding(day.id)}>
-                + Añadir ejercicio
-              </button>
-            </div>
-          ))}
+          <PlanEditor plan={plan} profile={profile} notes={notes} onChange={actions.setPlan} />
         </div>
         <p className="small muted">
-          Toca un ejercicio para ajustar series, repeticiones y descanso, añadir una nota, cambiarlo o quitarlo. Al rehacer la encuesta
-          conservas todo tu historial.
+          Toca un ejercicio para ajustar series, repeticiones, descanso y orden, añadir una nota, cambiarlo o quitarlo. Al rehacer la
+          encuesta conservas todo tu historial.
         </p>
         {confirmRedo && (
           <div className="stack" style={{ marginTop: 8 }}>
             <p className="small" style={{ margin: 0 }}>
-              Modificaste tu rutina. Al rehacer la encuesta se genera una rutina nueva y esos cambios se pierden; tu historial se mantiene.
+              {plan.custom
+                ? 'Al volver a la encuesta reemplazarás tu plan por uno nuevo; tu historial se mantiene.'
+                : 'Modificaste tu rutina. Al rehacer la encuesta se genera una rutina nueva y esos cambios se pierden; tu historial se mantiene.'}
             </p>
             <button className="btn btn-primary" onClick={onRedoSurvey}>
-              Rehacer encuesta
+              Ir a la encuesta
             </button>
             <button className="btn btn-ghost" onClick={() => setConfirmRedo(false)}>
               Mantener mi rutina
@@ -213,48 +185,8 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
         </div>
       </section>
 
-      {editing && !editing.swap && (
-        <ExerciseEditor
-          plan={plan}
-          dayId={editing.dayId}
-          index={editing.index}
-          note={notes[plan.days.find((d) => d.id === editing.dayId)?.exercises[editing.index]?.exerciseId ?? ''] ?? ''}
-          onSwap={() => setEditing({ ...editing, swap: true })}
-          onClose={() => setEditing(null)}
-        />
-      )}
-
-      {editing?.swap && (
-        <ExercisePicker
-          plan={plan}
-          profile={profile}
-          dayId={editing.dayId}
-          index={editing.index}
-          currentId={plan.days.find((d) => d.id === editing.dayId)!.exercises[editing.index].exerciseId}
-          mode="plan"
-          onApply={(id) => {
-            actions.replaceInPlan(editing.dayId, editing.index, id)
-            setEditing({ ...editing, swap: false })
-          }}
-          onClose={() => setEditing({ ...editing, swap: false })}
-        />
-      )}
-
-      {adding && (
-        <AddExercisePicker
-          plan={plan}
-          profile={profile}
-          dayId={adding}
-          onAdd={(id) => {
-            actions.addToPlan(adding, id)
-            setAdding(null)
-          }}
-          onClose={() => setAdding(null)}
-        />
-      )}
-
       <p className="small muted" style={{ marginTop: 32, textAlign: 'center' }}>
-        gAInlab versión 0.2
+        gAInlab versión 0.3
       </p>
     </>
   )

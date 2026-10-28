@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getExercise, listMuscles, musclesOf } from '../engine/exercises'
+import type { ExercisePatch } from '../engine/planEdit'
 import { checkRemoval } from '../engine/swap'
 import type { Plan } from '../engine/types'
 import { actions } from '../store'
@@ -28,12 +29,15 @@ interface Props {
   dayId: string
   index: number
   note: string
+  onUpdate: (patch: ExercisePatch) => void
+  onMove: (delta: -1 | 1) => void
+  onRemove: () => void
   onSwap: () => void
   onClose: () => void
 }
 
-/** Edit one exercise of the routine: sets, rep range, rest, note; replace or remove it. */
-export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Props) {
+/** Edit one exercise of a plan: sets, rep range, rest, order, note; replace or remove it. */
+export function ExerciseEditor({ plan, dayId, index, note, onUpdate, onMove, onRemove, onSwap, onClose }: Props) {
   const day = plan.days.find((d) => d.id === dayId)
   const entry = day?.exercises[index]
   const [text, setText] = useState(note)
@@ -44,7 +48,6 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
   const ranges = RANGES.some(([a, b]) => a === entry.repMin && b === entry.repMax)
     ? RANGES
     : [...RANGES, [entry.repMin, entry.repMax] as [number, number]]
-  const update = (patch: Parameters<typeof actions.updatePlanExercise>[2]) => actions.updatePlanExercise(dayId, index, patch)
   const saveNote = () => {
     if (text.trim() !== note) actions.setNote(entry.exerciseId, text)
   }
@@ -54,14 +57,13 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
   }
 
   if (removing) {
-    const only = day.exercises.length === 1
-    const warnings = checkRemoval(plan, dayId, index)
+    const warnings = checkRemoval(plan, dayId, index).filter((w) => !w.startsWith('Es el único'))
     return (
       <Sheet onClose={() => setRemoving(false)}>
-        <h2>¿Quitar {ex.name.toLowerCase()} de {day.name}?</h2>
-        {only ? (
-          <div className="note down">Es el único ejercicio del día. Añade otro antes de quitar este.</div>
-        ) : warnings.length > 0 ? (
+        <h2>
+          ¿Quitar {ex.name.toLowerCase()} de {day.name}?
+        </h2>
+        {warnings.length > 0 ? (
           warnings.map((w) => (
             <div className="note down" key={w}>
               {w}
@@ -70,19 +72,18 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
         ) : (
           <div className="note up">Los músculos que trabaja siguen cubiertos por otros ejercicios de tu semana.</div>
         )}
+        {day.exercises.length === 1 && <div className="note down">{day.name} quedará sin ejercicios.</div>}
         <p className="small muted">Su historial se conserva por si lo vuelves a añadir.</p>
         <div className="sheet-actions">
-          {!only && (
-            <button
-              className="btn btn-danger"
-              onClick={() => {
-                actions.removeFromPlan(dayId, index)
-                onClose()
-              }}
-            >
-              Quitar de {day.name}
-            </button>
-          )}
+          <button
+            className="btn btn-danger"
+            onClick={() => {
+              onRemove()
+              onClose()
+            }}
+          >
+            Quitar de {day.name}
+          </button>
           <button className="btn btn-ghost" onClick={() => setRemoving(false)}>
             Mantenerlo
           </button>
@@ -94,7 +95,7 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
   return (
     <Sheet onClose={close}>
       <p className="muted small" style={{ margin: 0 }}>
-        {day.name}, ejercicio {index + 1}
+        {day.name}, ejercicio {index + 1} de {day.exercises.length}
       </p>
       <h2>{ex.name}</h2>
       <p className="muted small" style={{ margin: 0 }}>
@@ -104,13 +105,13 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
       <div className="editor-row">
         <span className="label">Series</span>
         <div className="stepper">
-          <button onClick={() => update({ sets: entry.sets - 1 })} disabled={entry.sets <= 1} aria-label="Una serie menos">
+          <button onClick={() => onUpdate({ sets: entry.sets - 1 })} disabled={entry.sets <= 1} aria-label="Una serie menos">
             −
           </button>
           <output className="num" aria-live="polite">
             {entry.sets}
           </output>
-          <button onClick={() => update({ sets: entry.sets + 1 })} disabled={entry.sets >= 8} aria-label="Una serie más">
+          <button onClick={() => onUpdate({ sets: entry.sets + 1 })} disabled={entry.sets >= 8} aria-label="Una serie más">
             +
           </button>
         </div>
@@ -123,7 +124,7 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
             <button
               key={`${a}-${b}`}
               aria-pressed={entry.repMin === a && entry.repMax === b}
-              onClick={() => update({ repMin: a, repMax: b })}
+              onClick={() => onUpdate({ repMin: a, repMax: b })}
             >
               {a}–{b}
               {RANGE_HINT[`${a}-${b}`] && <small>{RANGE_HINT[`${a}-${b}`]}</small>}
@@ -136,12 +137,26 @@ export function ExerciseEditor({ plan, dayId, index, note, onSwap, onClose }: Pr
         <span className="label">Descanso entre series</span>
         <div className="chips" role="group" aria-label="Descanso entre series">
           {RESTS.map((r) => (
-            <button key={r} aria-pressed={entry.rest === r} onClick={() => update({ rest: r })}>
+            <button key={r} aria-pressed={entry.rest === r} onClick={() => onUpdate({ rest: r })}>
               {Math.floor(r / 60)}:{String(r % 60).padStart(2, '0')}
             </button>
           ))}
         </div>
       </div>
+
+      {day.exercises.length > 1 && (
+        <div className="editor-row">
+          <span className="label">Orden en el día</span>
+          <div className="chips">
+            <button onClick={() => onMove(-1)} disabled={index === 0}>
+              Mover antes
+            </button>
+            <button onClick={() => onMove(1)} disabled={index === day.exercises.length - 1}>
+              Mover después
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="editor-row">
         <label className="label" htmlFor="ex-note">

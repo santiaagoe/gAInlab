@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  EXERCISES,
+  allExercises,
   getExercise,
   isAvoided,
   listMuscles,
@@ -11,7 +11,8 @@ import {
 } from '../engine/exercises'
 import { entryFor } from '../engine/plan'
 import { checkSwap, type SwapLevel } from '../engine/swap'
-import type { Exercise, Plan, Profile, Slot } from '../engine/types'
+import type { Exercise, Kind, Muscle, Plan, Profile, Slot } from '../engine/types'
+import { actions } from '../store'
 
 interface Props {
   plan: Plan
@@ -177,14 +178,29 @@ function ExerciseList({
   onPick: (id: string) => void
 }) {
   const [query, setQuery] = useState('')
-  const available = EXERCISES.filter((e) => e.equip.includes(profile.equipment) && e.id !== exclude)
+  const [creating, setCreating] = useState(false)
+
+  if (creating) {
+    return <CreateExercise initialName={query} onCancel={() => setCreating(false)} onCreated={onPick} />
+  }
+
+  const available = allExercises().filter((e) => e.equip.includes(profile.equipment) && e.id !== exclude)
   const q = normalize(query.trim())
   const matches = q ? available.filter((e) => normalize(`${e.name} ${listMuscles(musclesOf(e))}`).includes(q)) : available
-  const sameZone = sameSlot ? matches.filter((e) => e.slot === sameSlot) : []
+  const mine = matches.filter((e) => e.custom)
+  const library = matches.filter((e) => !e.custom)
+  const sameZone = sameSlot ? library.filter((e) => e.slot === sameSlot) : []
   const groups = MUSCLE_ORDER.map((m) => ({
     muscle: m,
-    items: matches.filter((e) => mainMuscle(e) === m && e.slot !== sameSlot),
+    items: library.filter((e) => mainMuscle(e) === m && e.slot !== sameSlot),
   })).filter((g) => g.items.length > 0)
+
+  const createButton = (
+    <button className="pick create" onClick={() => setCreating(true)}>
+      <span className="pick-name">+ Crear {query.trim() ? `“${query.trim()}”` : 'un ejercicio nuevo'}</span>
+      <span className="pick-meta">Si tu ejercicio no está en la lista</span>
+    </button>
+  )
 
   return (
     <>
@@ -196,6 +212,15 @@ function ExerciseList({
         onChange={(e) => setQuery(e.target.value)}
         aria-label="Buscar ejercicio o músculo"
       />
+      {(q || mine.length > 0) && <div className="pick-group">{createButton}</div>}
+      {mine.length > 0 && (
+        <div className="pick-group">
+          <h3>Tus ejercicios</h3>
+          {mine.map((e) => (
+            <PickItem key={e.id} exercise={e} profile={profile} taken={taken.has(e.id)} onPick={onPick} />
+          ))}
+        </div>
+      )}
       {sameZone.length > 0 && (
         <div className="pick-group">
           <h3>Misma zona</h3>
@@ -214,10 +239,107 @@ function ExerciseList({
       ))}
       {matches.length === 0 && (
         <div className="empty" style={{ marginTop: 16 }}>
-          No hay ejercicios que coincidan con “{query}”.
+          No hay ejercicios que coincidan con “{query}”. Puedes crearlo con el botón de arriba.
         </div>
       )}
+      {!q && mine.length === 0 && <div className="pick-group">{createButton}</div>}
     </>
+  )
+}
+
+const KINDS: [Kind, string][] = [
+  ['barra', 'Barra'],
+  ['mancuerna', 'Mancuernas'],
+  ['maquina', 'Máquina o polea'],
+  ['corporal', 'Peso corporal'],
+]
+
+function CreateExercise({
+  initialName,
+  onCancel,
+  onCreated,
+}: {
+  initialName: string
+  onCancel: () => void
+  onCreated: (id: string) => void
+}) {
+  const [name, setName] = useState(capitalize(initialName.trim()))
+  const [kind, setKind] = useState<Kind | null>(null)
+  const [muscle, setMuscle] = useState<Muscle | null>(null)
+  const [compound, setCompound] = useState<boolean | null>(null)
+  const [tried, setTried] = useState(false)
+  const clean = name.trim()
+  const duplicate = clean && allExercises().some((e) => normalize(e.name) === normalize(clean))
+  const ready = clean.length >= 2 && kind && muscle && compound !== null && !duplicate
+
+  return (
+    <div className="create-form">
+      <div className="editor-row">
+        <label className="label" htmlFor="new-ex-name">
+          Nombre
+        </label>
+        <input
+          id="new-ex-name"
+          className="select"
+          value={name}
+          placeholder="Ej.: Press Hammer inclinado"
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
+        {duplicate && <p className="small" style={{ color: 'var(--down)', margin: '6px 0 0' }}>Ya existe un ejercicio con ese nombre.</p>}
+      </div>
+      <div className="editor-row">
+        <span className="label">Con qué se hace</span>
+        <div className="chips" role="group" aria-label="Con qué se hace">
+          {KINDS.map(([k, label]) => (
+            <button key={k} aria-pressed={kind === k} onClick={() => setKind(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="editor-row">
+        <span className="label">Músculo que más trabaja</span>
+        <div className="chips" role="group" aria-label="Músculo que más trabaja">
+          {MUSCLE_ORDER.map((m) => (
+            <button key={m} aria-pressed={muscle === m} onClick={() => setMuscle(m)}>
+              {capitalize(MUSCLE_NAMES[m])}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="editor-row">
+        <span className="label">Tipo de ejercicio</span>
+        <div className="chips" role="group" aria-label="Tipo de ejercicio">
+          <button aria-pressed={compound === true} onClick={() => setCompound(true)}>
+            Básico<small>press, remo, sentadilla</small>
+          </button>
+          <button aria-pressed={compound === false} onClick={() => setCompound(false)}>
+            Aislamiento<small>curl, extensión, aperturas</small>
+          </button>
+        </div>
+      </div>
+      {tried && !ready && !duplicate && (
+        <p className="small" style={{ color: 'var(--down)', margin: '10px 0 0' }}>
+          Completa el nombre y elige una opción en cada grupo.
+        </p>
+      )}
+      <div className="sheet-actions">
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setTried(true)
+            if (!ready) return
+            onCreated(actions.createExercise(clean, kind!, muscle!, compound!))
+          }}
+        >
+          Crear ejercicio
+        </button>
+        <button className="link" style={{ padding: 8 }} onClick={onCancel}>
+          Volver a la lista
+        </button>
+      </div>
+    </div>
   )
 }
 

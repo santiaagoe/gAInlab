@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { SessionEditor } from '../components/SessionEditor'
 import { getExercise } from '../engine/exercises'
+import { dayFocus } from '../engine/planEdit'
 import { historyFor, prescribe } from '../engine/progression'
 import type { Plan, Session, Settings } from '../engine/types'
 import { chipText, kg, relativeDay, sessionsThisWeek, toneFor } from '../format'
@@ -57,7 +58,7 @@ export function Today({ plan, sessions, settings, targetDays, justFinished, onDi
       <section className="hero">
         <div className="eyebrow">{day.id === suggested.id ? 'Hoy toca' : 'Elegiste'}</div>
         <h1 className="display">{day.name}</h1>
-        <p className="lede">{day.focus}</p>
+        <p className="lede">{dayFocus(day)}</p>
 
         <div className="rx-list">
           {day.exercises.map((pe) => {
@@ -89,9 +90,15 @@ export function Today({ plan, sessions, settings, targetDays, justFinished, onDi
           })}
         </div>
 
-        <button className="btn btn-primary btn-block" style={{ marginTop: 20 }} onClick={() => actions.startSession(day)}>
-          Empezar entrenamiento
-        </button>
+        {day.exercises.length === 0 ? (
+          <div className="empty" style={{ marginTop: 20 }}>
+            {day.name} no tiene ejercicios. Añádelos en Ajustes, en Tu plan.
+          </div>
+        ) : (
+          <button className="btn btn-primary btn-block" style={{ marginTop: 20 }} onClick={() => actions.startSession(day)}>
+            Empezar entrenamiento
+          </button>
+        )}
       </section>
 
       {plan.days.length > 1 && (
