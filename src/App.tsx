@@ -39,6 +39,7 @@ export default function App() {
       <main className="app no-nav">
         <SessionScreen
           active={active}
+          plan={plan}
           profile={profile}
           onFinished={() => {
             const all = getState().sessions
@@ -68,7 +69,7 @@ export default function App() {
             <Progress sessions={sessions} targetDays={profile.days} />
           </Suspense>
         )}
-        {tab === 'ajustes' && <SettingsScreen plan={plan} settings={settings} onRedoSurvey={() => setRedo(true)} />}
+        {tab === 'ajustes' && <SettingsScreen plan={plan} profile={profile} settings={settings} onRedoSurvey={() => setRedo(true)} />}
       </main>
       <nav className="nav" aria-label="Principal">
         <div className="nav-inner">

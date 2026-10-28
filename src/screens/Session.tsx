@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconCheck, IconSwap } from '../components/Icons'
-import { getExercise, optionsForSlot } from '../engine/exercises'
-import type { Feel, Profile, SetLog } from '../engine/types'
+import { ExercisePicker } from '../components/ExercisePicker'
+import { getExercise } from '../engine/exercises'
+import type { Feel, Plan, Profile, SetLog } from '../engine/types'
 import { kg, relativeDay, setsText, toneFor } from '../format'
 import { actions, type ActiveExercise, type ActiveSession } from '../store'
 
@@ -11,7 +12,17 @@ interface Rest {
   label: string
 }
 
-export function SessionScreen({ active, profile, onFinished }: { active: ActiveSession; profile: Profile; onFinished: () => void }) {
+export function SessionScreen({
+  active,
+  plan,
+  profile,
+  onFinished,
+}: {
+  active: ActiveSession
+  plan: Plan
+  profile: Profile
+  onFinished: () => void
+}) {
   const [rest, setRest] = useState<Rest | null>(null)
   const [swapIndex, setSwapIndex] = useState<number | null>(null)
   const [confirm, setConfirm] = useState(false)
@@ -62,12 +73,15 @@ export function SessionScreen({ active, profile, onFinished }: { active: ActiveS
       {rest && <RestTimer rest={rest} onAdd={() => setRest({ ...rest, endsAt: rest.endsAt + 30_000, total: rest.total + 30 })} onClose={() => setRest(null)} />}
 
       {swapIndex !== null && (
-        <SwapSheet
-          current={active.exercises[swapIndex]}
-          taken={active.exercises.map((e) => e.exerciseId)}
+        <ExercisePicker
+          plan={plan}
           profile={profile}
-          onPick={(id) => {
-            actions.swapExercise(swapIndex, id)
+          dayId={active.dayId}
+          index={swapIndex}
+          currentId={active.exercises[swapIndex].exerciseId}
+          mode="session"
+          onApply={(id, inPlan) => {
+            actions.swapExercise(swapIndex, id, inPlan)
             setSwapIndex(null)
           }}
           onClose={() => setSwapIndex(null)}
@@ -331,45 +345,6 @@ function RestTimer({ rest, onAdd, onClose }: { rest: Rest; onAdd: () => void; on
       <span className="timer-label">{over ? '¡A darle!' : rest.label}</span>
       {!over && <button onClick={onAdd}>+30 s</button>}
       <button onClick={onClose}>{over ? 'Cerrar' : 'Saltar'}</button>
-    </div>
-  )
-}
-
-function SwapSheet({
-  current,
-  taken,
-  profile,
-  onPick,
-  onClose,
-}: {
-  current: ActiveExercise
-  taken: string[]
-  profile: Profile
-  onPick: (id: string) => void
-  onClose: () => void
-}) {
-  const options = optionsForSlot(current.plan.slot, profile.equipment, profile.injuries).filter(
-    (e) => !taken.includes(e.id),
-  )
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h2>Cambiar {getExercise(current.exerciseId).name.toLowerCase()}</h2>
-        <p className="muted small">Solo para esta sesión. Cada ejercicio guarda su propio progreso.</p>
-        <div className="sheet-list">
-          {options.length === 0 && <div className="empty">No hay alternativas con tu equipo.</div>}
-          {options.map((o) => (
-            <button key={o.id} className="option" onClick={() => onPick(o.id)}>
-              <strong>{o.name}</strong>
-            </button>
-          ))}
-        </div>
-        <div className="sheet-actions">
-          <button className="btn btn-ghost" onClick={onClose}>
-            Cancelar
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

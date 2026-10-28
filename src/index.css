@@ -836,6 +836,71 @@ h3 {
   margin-top: 20px;
 }
 
+.search {
+  margin-top: 14px;
+}
+
+.pick-group {
+  margin-top: 18px;
+}
+
+.pick-group h3 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.pick {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pick:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pick-name {
+  display: block;
+  font-weight: 600;
+}
+
+.pick-meta {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pick-warn {
+  color: var(--down);
+}
+
+.plan-edit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  font-size: 0.92rem;
+  padding: 4px 0;
+}
+
+.plan-edit .num {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.plan-edit .edit-hint {
+  color: var(--ai);
+  font-size: 0.78rem;
+  margin-left: 6px;
+}
+
 @keyframes rise {
   from {
     transform: translateY(24px);

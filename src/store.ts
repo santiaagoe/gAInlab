@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { getExercise } from './engine/exercises'
 import { buildPlan } from './engine/plan'
 import { historyFor, prescribe } from './engine/progression'
 import type { Feel, Plan, PlanDay, PlanExercise, Prescription, Profile, Session, SetLog, Settings } from './engine/types'
@@ -126,11 +127,26 @@ export const actions = {
     set({ ...state, active: { ...active, exercises } })
   },
 
-  swapExercise(exIndex: number, exerciseId: string) {
+  /** Swaps an exercise in the running session; with `inPlan` the routine changes too. */
+  swapExercise(exIndex: number, exerciseId: string, inPlan = false) {
     const active = state.active
     if (!active) return
-    const exercises = active.exercises.map((ex, i) => (i === exIndex ? prepareExercise(ex.plan, exerciseId) : ex))
+    if (inPlan) actions.replaceInPlan(active.dayId, exIndex, exerciseId)
+    const exercises = active.exercises.map((ex, i) =>
+      i === exIndex ? prepareExercise({ ...ex.plan, slot: getExercise(exerciseId).slot }, exerciseId) : ex,
+    )
     set({ ...state, active: { ...active, exercises } })
+  },
+
+  /** Permanently replaces one exercise of the routine, keeping its sets, reps and rest. */
+  replaceInPlan(dayId: string, index: number, exerciseId: string) {
+    const plan = state.plan
+    if (!plan) return
+    const slot = getExercise(exerciseId).slot
+    const days = plan.days.map((d) =>
+      d.id !== dayId ? d : { ...d, exercises: d.exercises.map((e, i) => (i === index ? { ...e, exerciseId, slot } : e)) },
+    )
+    set({ ...state, plan: { ...plan, days, edited: true } })
   },
 
   finishSession() {

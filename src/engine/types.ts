@@ -23,6 +23,17 @@ export type Slot =
   | 'biceps'
   | 'triceps'
 
+export type Muscle =
+  | 'cuadriceps'
+  | 'gluteo'
+  | 'femoral'
+  | 'gemelo'
+  | 'pecho'
+  | 'espalda'
+  | 'hombro'
+  | 'biceps'
+  | 'triceps'
+
 export interface Profile {
   goal: Goal
   experience: Experience
@@ -42,6 +53,8 @@ export interface Exercise {
   equip: Equipment[]
   compound: boolean
   avoid?: Injury[]
+  /** Overrides the slot's default muscles; the first one is the main target. */
+  muscles?: Muscle[]
 }
 
 export interface PlanExercise {
@@ -65,6 +78,8 @@ export interface Plan {
   name: string
   summary: string
   days: PlanDay[]
+  /** True once the user replaced an exercise by hand. */
+  edited?: boolean
 }
 
 export interface SetLog {

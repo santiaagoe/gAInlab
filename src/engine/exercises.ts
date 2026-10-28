@@ -1,4 +1,4 @@
-import type { Equipment, Exercise, Injury, Slot } from './types'
+import type { Equipment, Exercise, Injury, Muscle, Slot } from './types'
 
 const ALL: Equipment[] = ['gimnasio', 'basico', 'casa']
 const BAR: Equipment[] = ['gimnasio', 'basico']
@@ -15,9 +15,9 @@ export const EXERCISES: Exercise[] = [
 
   // Bisagra de cadera
   { id: 'rumano-barra', name: 'Peso muerto rumano con barra', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
-  { id: 'hip-thrust-barra', name: 'Hip thrust con barra', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true },
+  { id: 'hip-thrust-barra', name: 'Hip thrust con barra', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true, muscles: ['gluteo', 'femoral'] },
   { id: 'rumano-mancuernas', name: 'Peso muerto rumano con mancuernas', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['espalda'] },
-  { id: 'hip-thrust-mancuerna', name: 'Hip thrust con mancuerna', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'hip-thrust-mancuerna', name: 'Hip thrust con mancuerna', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, muscles: ['gluteo', 'femoral'] },
 
   // Press horizontal
   { id: 'banca-barra', name: 'Press banca con barra', slot: 'pressHorizontal', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
@@ -31,7 +31,7 @@ export const EXERCISES: Exercise[] = [
   { id: 'press-hombro-mancuernas', name: 'Press de hombro con mancuernas', slot: 'pressVertical', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['hombro'] },
   { id: 'press-hombro-maquina', name: 'Press de hombro en máquina', slot: 'pressVertical', kind: 'maquina', equip: GYM, compound: true, avoid: ['hombro'] },
   { id: 'landmine', name: 'Press landmine', slot: 'pressVertical', kind: 'barra', equip: BAR, compound: true },
-  { id: 'lateral-sustituto', name: 'Elevaciones laterales con mancuernas', slot: 'pressVertical', kind: 'mancuerna', equip: ALL, compound: false },
+  { id: 'lateral-sustituto', name: 'Elevaciones laterales con mancuernas', slot: 'pressVertical', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['hombro'] },
 
   // Remo
   { id: 'remo-barra', name: 'Remo con barra', slot: 'remo', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
@@ -56,7 +56,7 @@ export const EXERCISES: Exercise[] = [
   { id: 'step-up-bajo', name: 'Subida al cajón bajo', slot: 'cuadriceps', kind: 'mancuerna', equip: ALL, compound: false },
   { id: 'curl-femoral', name: 'Curl femoral', slot: 'femoral', kind: 'maquina', equip: GYM, compound: false },
   { id: 'rumano-una-pierna', name: 'Peso muerto a una pierna', slot: 'femoral', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['espalda'] },
-  { id: 'puente-una-pierna', name: 'Puente de glúteo a una pierna', slot: 'femoral', kind: 'mancuerna', equip: ALL, compound: false },
+  { id: 'puente-una-pierna', name: 'Puente de glúteo a una pierna', slot: 'femoral', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['gluteo', 'femoral'] },
   { id: 'gemelo-maquina', name: 'Elevación de talones en máquina', slot: 'gemelo', kind: 'maquina', equip: GYM, compound: false },
   { id: 'gemelo-mancuerna', name: 'Elevación de talones con mancuerna', slot: 'gemelo', kind: 'mancuerna', equip: ALL, compound: false },
 
@@ -73,6 +73,57 @@ export const EXERCISES: Exercise[] = [
   { id: 'frances-mancuernas', name: 'Press francés con mancuernas', slot: 'triceps', kind: 'mancuerna', equip: ALL, compound: false },
   { id: 'triceps-sobre-cabeza', name: 'Extensión de tríceps sobre la cabeza', slot: 'triceps', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'] },
 ]
+
+const SLOT_MUSCLES: Record<Slot, Muscle[]> = {
+  sentadilla: ['cuadriceps', 'gluteo'],
+  bisagra: ['femoral', 'gluteo'],
+  pressHorizontal: ['pecho', 'triceps', 'hombro'],
+  pressVertical: ['hombro', 'triceps'],
+  remo: ['espalda', 'biceps'],
+  jalon: ['espalda', 'biceps'],
+  unilateral: ['cuadriceps', 'gluteo'],
+  cuadriceps: ['cuadriceps'],
+  femoral: ['femoral'],
+  gemelo: ['gemelo'],
+  pecho: ['pecho'],
+  lateral: ['hombro'],
+  biceps: ['biceps'],
+  triceps: ['triceps'],
+}
+
+export const MUSCLE_NAMES: Record<Muscle, string> = {
+  cuadriceps: 'cuádriceps',
+  gluteo: 'glúteos',
+  femoral: 'femorales',
+  gemelo: 'gemelos',
+  pecho: 'pecho',
+  espalda: 'espalda',
+  hombro: 'hombros',
+  biceps: 'bíceps',
+  triceps: 'tríceps',
+}
+
+/** Order used to group the exercise picker, from the main target muscle. */
+export const MUSCLE_ORDER: Muscle[] = ['pecho', 'espalda', 'hombro', 'cuadriceps', 'gluteo', 'femoral', 'gemelo', 'biceps', 'triceps']
+
+export function musclesOf(exercise: Exercise): Muscle[] {
+  return exercise.muscles ?? SLOT_MUSCLES[exercise.slot]
+}
+
+export function mainMuscle(exercise: Exercise): Muscle {
+  return musclesOf(exercise)[0]
+}
+
+/** "pecho, tríceps y hombros" */
+export function listMuscles(muscles: Muscle[]): string {
+  const names = muscles.map((m) => MUSCLE_NAMES[m])
+  if (names.length <= 1) return names.join('')
+  return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`
+}
+
+export function isAvoided(exercise: Exercise, injuries: Injury[]): Injury[] {
+  return (exercise.avoid ?? []).filter((i) => injuries.includes(i))
+}
 
 const BY_ID = new Map(EXERCISES.map((e) => [e.id, e]))
 

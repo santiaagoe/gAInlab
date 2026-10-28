@@ -1,0 +1,180 @@
+import { useMemo, useState } from 'react'
+import {
+  EXERCISES,
+  getExercise,
+  isAvoided,
+  listMuscles,
+  mainMuscle,
+  MUSCLE_NAMES,
+  MUSCLE_ORDER,
+  musclesOf,
+} from '../engine/exercises'
+import { checkSwap, type SwapLevel } from '../engine/swap'
+import type { Exercise, Plan, Profile } from '../engine/types'
+
+interface Props {
+  plan: Plan
+  profile: Profile
+  dayId: string
+  index: number
+  /** The exercise currently in that position (may differ from the plan during a session). */
+  currentId: string
+  /** "session" offers "Solo hoy" besides changing the routine. */
+  mode: 'session' | 'plan'
+  onApply: (exerciseId: string, inPlan: boolean) => void
+  onClose: () => void
+}
+
+const TONE: Record<SwapLevel, string> = { igual: 'up', parecido: 'ai', distinto: 'down', bloqueado: 'down' }
+
+export function ExercisePicker({ plan, profile, dayId, index, currentId, mode, onApply, onClose }: Props) {
+  const [query, setQuery] = useState('')
+  const [chosen, setChosen] = useState<string | null>(null)
+  const current = getExercise(currentId)
+  const day = plan.days.find((d) => d.id === dayId)
+  const takenInDay = new Set(day?.exercises.map((e, i) => (i === index ? '' : e.exerciseId)))
+
+  // The comparison uses what is in that position right now, even if it was swapped just for today.
+  const effectivePlan: Plan = useMemo(
+    () => ({
+      ...plan,
+      days: plan.days.map((d) =>
+        d.id !== dayId ? d : { ...d, exercises: d.exercises.map((e, i) => (i === index ? { ...e, exerciseId: currentId } : e)) },
+      ),
+    }),
+    [plan, dayId, index, currentId],
+  )
+
+  const available = EXERCISES.filter((e) => e.equip.includes(profile.equipment) && e.id !== currentId)
+  const q = normalize(query.trim())
+  const matches = q ? available.filter((e) => normalize(`${e.name} ${listMuscles(musclesOf(e))}`).includes(q)) : available
+  const sameZone = matches.filter((e) => e.slot === current.slot)
+  const groups = MUSCLE_ORDER.map((m) => ({
+    muscle: m,
+    items: matches.filter((e) => mainMuscle(e) === m && e.slot !== current.slot),
+  })).filter((g) => g.items.length > 0)
+
+  if (chosen) {
+    const next = getExercise(chosen)
+    const check = checkSwap(effectivePlan, dayId, index, chosen, profile.injuries)
+    const blocked = check.level === 'bloqueado'
+    return (
+      <Sheet onClose={onClose}>
+        <p className="muted small" style={{ margin: 0 }}>
+          {current.name} por
+        </p>
+        <h2>{next.name}</h2>
+        <div className={`note ${TONE[check.level]}`}>{check.title}</div>
+        {check.warnings.map((w) => (
+          <div className="note down" key={w}>
+            {w}
+          </div>
+        ))}
+        {!blocked && (
+          <p className="small muted" style={{ marginBottom: 0 }}>
+            Mantiene las mismas series y repeticiones. Si es la primera vez que lo haces, empezará con una sesión de calibración.
+          </p>
+        )}
+        <div className="sheet-actions">
+          {!blocked && mode === 'session' && (
+            <button className="btn btn-ghost" onClick={() => onApply(chosen, false)}>
+              Solo hoy
+            </button>
+          )}
+          {!blocked && (
+            <button className="btn btn-primary" onClick={() => onApply(chosen, true)}>
+              Cambiar en mi rutina
+            </button>
+          )}
+          <button className="link" style={{ padding: 8 }} onClick={() => setChosen(null)}>
+            Elegir otro ejercicio
+          </button>
+        </div>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Sheet onClose={onClose}>
+      <h2>Cambiar {current.name.toLowerCase()}</h2>
+      <p className="muted small" style={{ margin: 0 }}>
+        Trabaja {listMuscles(musclesOf(current))}. Cada ejercicio guarda su propio progreso.
+      </p>
+      <input
+        className="select search"
+        type="search"
+        placeholder="Buscar ejercicio o músculo"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="Buscar ejercicio o músculo"
+      />
+
+      {sameZone.length > 0 && (
+        <div className="pick-group">
+          <h3>Misma zona</h3>
+          {sameZone.map((e) => (
+            <PickItem key={e.id} exercise={e} profile={profile} taken={takenInDay.has(e.id)} onPick={setChosen} />
+          ))}
+        </div>
+      )}
+
+      {groups.map((g) => (
+        <div className="pick-group" key={g.muscle}>
+          <h3>{capitalize(MUSCLE_NAMES[g.muscle])}</h3>
+          {g.items.map((e) => (
+            <PickItem key={e.id} exercise={e} profile={profile} taken={takenInDay.has(e.id)} onPick={setChosen} />
+          ))}
+        </div>
+      ))}
+
+      {matches.length === 0 && <div className="empty" style={{ marginTop: 16 }}>No hay ejercicios que coincidan con “{query}”.</div>}
+
+      <div className="sheet-actions">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancelar
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
+function PickItem({
+  exercise,
+  profile,
+  taken,
+  onPick,
+}: {
+  exercise: Exercise
+  profile: Profile
+  taken: boolean
+  onPick: (id: string) => void
+}) {
+  const risky = isAvoided(exercise, profile.injuries).length > 0
+  return (
+    <button className="pick" disabled={taken} onClick={() => onPick(exercise.id)}>
+      <span className="pick-name">{exercise.name}</span>
+      <span className="pick-meta">
+        {taken ? 'Ya está en este día' : listMuscles(musclesOf(exercise))}
+        {risky && !taken && <span className="pick-warn"> Puede molestar tu lesión</span>}
+      </span>
+    </button>
+  )
+}
+
+function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function normalize(s: string): string {
+  return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
