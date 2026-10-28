@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { getExercise } from './engine/exercises'
-import { buildPlan } from './engine/plan'
+import { buildPlan, entryFor } from './engine/plan'
 import { historyFor, prescribe } from './engine/progression'
 import type { Feel, Plan, PlanDay, PlanExercise, Prescription, Profile, Session, SetLog, Settings } from './engine/types'
 
@@ -18,6 +18,8 @@ export interface ActiveSession {
   dayId: string
   dayName: string
   exercises: ActiveExercise[]
+  /** Exercise shown in focus mode. */
+  current?: number
 }
 
 export interface AppState {
@@ -27,14 +29,16 @@ export interface AppState {
   sessions: Session[]
   settings: Settings
   active?: ActiveSession
+  /** Personal notes per exercise (seat height, technique cues...). */
+  notes: Record<string, string>
 }
 
 const KEY = 'gainlab:v1'
 
-const DEFAULT_SETTINGS: Settings = { incBarra: 2.5, incMancuerna: 2, incMaquina: 2.5 }
+const DEFAULT_SETTINGS: Settings = { incBarra: 2.5, incMancuerna: 2, incMaquina: 2.5, sessionView: 'enfoque' }
 
 function initial(): AppState {
-  return { version: 1, sessions: [], settings: DEFAULT_SETTINGS }
+  return { version: 1, sessions: [], settings: DEFAULT_SETTINGS, notes: {} }
 }
 
 function load(): AppState {
@@ -42,7 +46,7 @@ function load(): AppState {
     const raw = localStorage.getItem(KEY)
     if (!raw) return initial()
     const parsed = JSON.parse(raw) as AppState
-    return { ...initial(), ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings } }
+    return { ...initial(), ...parsed, settings: { ...DEFAULT_SETTINGS, ...parsed.settings }, notes: parsed.notes ?? {} }
   } catch {
     return initial()
   }
@@ -96,7 +100,7 @@ export const actions = {
     const exercises: ActiveExercise[] = day.exercises.map((plan) => prepareExercise(plan, plan.exerciseId))
     set({
       ...state,
-      active: { id: uid(), startedAt: new Date().toISOString(), dayId: day.id, dayName: day.name, exercises },
+      active: { id: uid(), startedAt: new Date().toISOString(), dayId: day.id, dayName: day.name, exercises, current: 0 },
     })
   },
 
@@ -149,6 +153,58 @@ export const actions = {
     set({ ...state, plan: { ...plan, days, edited: true } })
   },
 
+  setCurrent(index: number) {
+    const active = state.active
+    if (!active) return
+    const current = Math.max(0, Math.min(active.exercises.length - 1, index))
+    set({ ...state, active: { ...active, current } })
+  },
+
+  setNote(exerciseId: string, text: string) {
+    const notes = { ...state.notes }
+    if (text.trim()) notes[exerciseId] = text.trim()
+    else delete notes[exerciseId]
+    set({ ...state, notes })
+  },
+
+  /** Changes sets, rep range or rest of one exercise in the routine. */
+  updatePlanExercise(dayId: string, index: number, patch: Partial<Pick<PlanExercise, 'sets' | 'repMin' | 'repMax' | 'rest'>>) {
+    const plan = state.plan
+    if (!plan) return
+    const days = plan.days.map((d) =>
+      d.id !== dayId ? d : { ...d, exercises: d.exercises.map((e, i) => (i === index ? { ...e, ...patch } : e)) },
+    )
+    set({ ...state, plan: { ...plan, days, edited: true } })
+  },
+
+  removeFromPlan(dayId: string, index: number) {
+    const plan = state.plan
+    if (!plan) return
+    const days = plan.days.map((d) => (d.id !== dayId ? d : { ...d, exercises: d.exercises.filter((_, i) => i !== index) }))
+    set({ ...state, plan: { ...plan, days, edited: true } })
+  },
+
+  addToPlan(dayId: string, exerciseId: string) {
+    const plan = state.plan
+    const profile = state.profile
+    if (!plan || !profile) return
+    const entry = entryFor(profile, getExercise(exerciseId))
+    const days = plan.days.map((d) => (d.id !== dayId ? d : { ...d, exercises: [...d.exercises, entry] }))
+    set({ ...state, plan: { ...plan, days, edited: true } })
+  },
+
+  /** Saves corrections to a past session; a session left without sets is removed. */
+  replaceSession(session: Session) {
+    const exercises = session.exercises
+      .map((e) => ({ ...e, sets: e.sets.filter((s) => s.reps > 0) }))
+      .filter((e) => e.sets.length > 0)
+    const sessions =
+      exercises.length === 0
+        ? state.sessions.filter((s) => s.id !== session.id)
+        : state.sessions.map((s) => (s.id === session.id ? { ...session, exercises } : s))
+    set({ ...state, sessions })
+  },
+
   finishSession() {
     const active = state.active
     if (!active) return
@@ -180,7 +236,13 @@ export const actions = {
   },
 
   importData(data: AppState) {
-    set({ ...initial(), ...data, settings: { ...DEFAULT_SETTINGS, ...data.settings }, active: undefined })
+    set({
+      ...initial(),
+      ...data,
+      settings: { ...DEFAULT_SETTINGS, ...data.settings },
+      notes: data.notes ?? {},
+      active: undefined,
+    })
   },
 
   resetAll() {

@@ -237,3 +237,37 @@ export function prescribe(
         : 'Mismo peso: suma una repetición por serie.',
   }
 }
+
+export interface WarmupSet {
+  weight: number
+  reps: number
+}
+
+const BAR_KG = 20
+
+/**
+ * Ramp-up sets before the working weight of a compound lift.
+ * Barbell: empty bar, then ~50%, ~70% and (for heavy work) ~85%. Dumbbells and machines: ~50% and ~75%.
+ */
+export function warmupSets(work: number, kind: Kind, step: number): WarmupSet[] {
+  if (work <= 0 || kind === 'corporal') return []
+  const out: WarmupSet[] = []
+  const push = (weight: number, reps: number) => {
+    if (weight <= 0 || weight >= work) return
+    if (out.some((s) => s.weight === weight)) return
+    if (out.length > 0 && weight <= out[out.length - 1].weight) return
+    out.push({ weight, reps })
+  }
+  if (kind === 'barra') {
+    if (work < BAR_KG + 10) return []
+    push(BAR_KG, 10)
+    push(roundDown(work * 0.5, step), 5)
+    push(roundDown(work * 0.7, step), 3)
+    if (work >= 80) push(roundDown(work * 0.85, step), 1)
+    return out
+  }
+  if (work < 10) return []
+  push(roundDown(work * 0.5, step), 8)
+  push(roundDown(work * 0.75, step), 4)
+  return out
+}

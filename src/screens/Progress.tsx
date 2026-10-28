@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { SessionEditor } from '../components/SessionEditor'
 import { findExercise } from '../engine/exercises'
 import { bestE1rm, historyFor } from '../engine/progression'
 import type { Session } from '../engine/types'
-import { kg, setsText, shortDate, weekStart } from '../format'
+import { kg, relativeDay, setsText, shortDate, weekStart } from '../format'
 
 const WEEKS = 8
 
@@ -18,6 +19,10 @@ export function Progress({ sessions, targetDays }: { sessions: Session[]; target
   }, [sessions])
 
   const [selected, setSelected] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Session | null>(null)
+  const [showAll, setShowAll] = useState(false)
+  const newestFirst = [...sessions].reverse()
+  const visible = showAll ? newestFirst : newestFirst.slice(0, 8)
   const exerciseId = selected && exerciseIds.includes(selected) ? selected : exerciseIds[0]
   const history = exerciseId ? historyFor(exerciseId, sessions) : []
   const data = history.map((h) => ({
@@ -148,6 +153,34 @@ export function Progress({ sessions, targetDays }: { sessions: Session[]; target
           </>
         )}
       </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2 className="h2">Historial</h2>
+          <span className="small muted">Toca para corregir</span>
+        </div>
+        {newestFirst.length === 0 ? (
+          <div className="empty">Aún no hay sesiones guardadas.</div>
+        ) : (
+          <>
+            {visible.map((s) => (
+              <button className="history-btn" key={s.id} onClick={() => setEditing(s)}>
+                <span>{s.dayName}</span>
+                <span className="meta">
+                  {relativeDay(s.date)}, {s.exercises.reduce((n, e) => n + e.sets.length, 0)} series
+                </span>
+              </button>
+            ))}
+            {newestFirst.length > visible.length && (
+              <button className="add-exercise" onClick={() => setShowAll(true)}>
+                Ver las {newestFirst.length} sesiones
+              </button>
+            )}
+          </>
+        )}
+      </section>
+
+      {editing && <SessionEditor session={editing} onClose={() => setEditing(null)} />}
     </>
   )
 }

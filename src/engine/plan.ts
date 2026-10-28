@@ -1,5 +1,5 @@
 import { optionsForSlot } from './exercises'
-import type { Goal, Plan, PlanDay, PlanExercise, Profile, Role, Slot } from './types'
+import type { Exercise, Goal, Plan, PlanDay, PlanExercise, Profile, Role, Slot } from './types'
 
 interface SlotSpec {
   slot: Slot
@@ -159,7 +159,7 @@ const SPLITS: Record<number, { name: string; days: DayTemplate[] }> = {
   6: { name: 'Empuje, tirón y pierna, 6 días', days: [EMPUJE, TIRON, PIERNA_A, EMPUJE_B, TIRON_B, PIERNA_B] },
 }
 
-interface Dose {
+export interface Dose {
   sets: number
   repMin: number
   repMax: number
@@ -197,7 +197,7 @@ export function maxExercisesFor(minutes: number): number {
   return 7
 }
 
-function doseFor(profile: Profile, role: Role): Dose {
+export function doseFor(profile: Profile, role: Role): Dose {
   const base = { ...DOSES[profile.goal][role] }
   if (profile.experience === 'nuevo') {
     base.sets = Math.min(base.sets, role === 'principal' ? 3 : 2)
@@ -254,4 +254,10 @@ function summaryFor(profile: Profile): string {
     parts.push('Evitamos los ejercicios que suelen cargar las zonas donde tienes molestias.')
   }
   return parts.join(' ')
+}
+
+/** Plan entry for an exercise the user adds by hand: compounds as secondary work, the rest as accessories. */
+export function entryFor(profile: Profile, exercise: Exercise): PlanExercise {
+  const role: Role = exercise.compound ? 'secundario' : 'accesorio'
+  return { exerciseId: exercise.id, slot: exercise.slot, role, ...doseFor(profile, role) }
 }

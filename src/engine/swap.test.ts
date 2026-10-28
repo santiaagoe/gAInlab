@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildPlan } from './plan'
-import { checkSwap } from './swap'
+import { checkRemoval, checkSwap } from './swap'
 import type { Plan, Profile } from './types'
 
 const profile: Profile = {
@@ -65,5 +65,16 @@ describe('checkSwap', () => {
   it('warns about injuries', () => {
     const r = checkSwap(plan, 'd1', 1, 'aperturas-mancuernas', ['hombro'])
     expect(r.warnings.some((w) => w.includes('hombro'))).toBe(true)
+  })
+})
+
+describe('checkRemoval', () => {
+  it('warns only when a muscle loses all weekly work', () => {
+    const p = buildPlan({ ...profile, days: 4 })
+    const torsoA = p.days[0]
+    const lateral = torsoA.exercises.findIndex((e) => e.slot === 'lateral')
+    expect(lateral).toBeGreaterThanOrEqual(0)
+    // Shoulders are still trained by the overhead press, so no warning.
+    expect(checkRemoval(p, torsoA.id, lateral)).toHaveLength(0)
   })
 })

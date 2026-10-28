@@ -15,7 +15,10 @@ gAInlab es una app web instalable (PWA) para entrenar en el gimnasio con progres
   - Bajo el rango: repite el peso; si pasa dos veces seguidas, baja un 10%.
   - Calibración muy lejos del rango: recalcula el peso con el 1RM estimado (Epley) y cómo se sintió.
   - Modo regreso: tras 2+ semanas sin un ejercicio, baja un 10–30% según la pausa.
-- **Sesión en el gimnasio**: valores prellenados, marcar series con un toque, temporizador de descanso con vibración, cambio de ejercicio con un toque.
+- **Modo entrenamiento**: un ejercicio a la vez, barra con todos los ejercicios y su avance, botón "Siguiente" que se destaca al terminar las series y deslizar para cambiar de ejercicio. También hay vista de lista.
+- **Sesión en el gimnasio**: valores prellenados, serie actual destacada, marcar series con un toque, temporizador de descanso con vibración, series de calentamiento sugeridas y notas por ejercicio.
+- **Rutina editable**: cambiar un ejercicio (solo hoy o en la rutina) con aviso si no trabaja la misma zona, ajustar series, rango y descanso, añadir y quitar ejercicios con aviso si un músculo queda sin trabajo.
+- **Historial editable**: corregir o borrar sesiones pasadas; las prescripciones se recalculan solas.
 - **Progreso**: constancia por semana, racha de semanas cumplidas y gráfico de fuerza estimada por ejercicio.
 - **Datos locales**: todo se guarda en el celular, con respaldo y restauración en JSON. Funciona sin internet.
 

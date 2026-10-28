@@ -735,6 +735,355 @@ h3 {
   background: var(--ai-soft);
 }
 
+/* ---------- Focus mode ---------- */
+
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 -16px;
+  padding: 12px 16px 4px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.strip-item {
+  flex: none;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  max-width: 172px;
+  padding: 8px 12px 8px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  text-align: left;
+  scroll-snap-align: center;
+}
+
+.strip-item[aria-current='step'] {
+  border-color: var(--ai);
+  background: var(--ai-soft);
+}
+
+.strip-num {
+  grid-row: span 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.strip-item[aria-current='step'] .strip-num {
+  background: var(--ai);
+  color: #120e2e;
+}
+
+.strip-item.complete .strip-num {
+  background: var(--up);
+  color: #06261c;
+}
+
+.strip-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.strip-sets {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.focus-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 12px 16px calc(12px + var(--safe-b));
+  background: rgba(14, 19, 34, 0.94);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+
+.focus-nav-inner {
+  display: flex;
+  gap: 10px;
+  max-width: 488px;
+  margin: 0 auto;
+}
+
+.focus-prev {
+  width: 56px;
+  padding: 0;
+  flex: none;
+}
+
+.focus-prev:disabled {
+  opacity: 0.35;
+}
+
+.focus-next {
+  flex: 1;
+  min-height: 60px;
+  justify-content: space-between;
+  padding: 0 16px 0 22px;
+  min-width: 0;
+}
+
+.focus-next-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.focus-next-text small {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.focus-next-text,
+.focus-next-text * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.set-row.next .field input {
+  border-color: rgba(154, 140, 255, 0.55);
+}
+
+.set-row.next .check {
+  background: var(--ai-soft);
+  color: var(--ai);
+}
+
+.warmup {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 0.82rem;
+}
+
+.warmup-label {
+  color: var(--muted);
+}
+
+.my-note,
+.add-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.my-note {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--line);
+}
+
+.my-note-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.add-note {
+  color: var(--muted);
+}
+
+.note-edit {
+  margin-top: 10px;
+}
+
+.note-edit textarea,
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  resize: vertical;
+}
+
+.note-edit textarea:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--ai);
+}
+
+.note-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-top: 6px;
+}
+
+/* ---------- Editors ---------- */
+
+.editor-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.editor-row > .label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.stepper button {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.stepper button:disabled {
+  opacity: 0.3;
+}
+
+.stepper output {
+  min-width: 40px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chips button {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.chips button[aria-pressed='true'] {
+  border-color: var(--ai);
+  background: var(--ai-soft);
+}
+
+.chips button small {
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.add-exercise {
+  margin-top: 6px;
+  color: var(--ai);
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 6px 0;
+}
+
+.edit-set-row {
+  display: grid;
+  grid-template-columns: 24px 1fr 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.edit-set-row .field input {
+  height: 46px;
+  font-size: 1rem;
+}
+
+.edit-set-row .remove {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: 999px;
+}
+
+.edit-ex {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.edit-ex h3 {
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.history-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.history-btn .meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
 /* ---------- Rest timer ---------- */
 
 .timer {
@@ -774,6 +1123,10 @@ h3 {
 .timer-label {
   position: relative;
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.82rem;
   color: var(--muted);
 }
@@ -786,6 +1139,10 @@ h3 {
   background: var(--surface);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+.timer.raised {
+  bottom: calc(96px + var(--safe-b));
 }
 
 .timer.over {

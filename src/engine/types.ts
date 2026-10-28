@@ -108,6 +108,8 @@ export interface Settings {
   incBarra: number
   incMancuerna: number
   incMaquina: number
+  /** How a session is shown: one exercise at a time, or all in a list. */
+  sessionView: 'enfoque' | 'lista'
 }
 
 export type PrescriptionMode =

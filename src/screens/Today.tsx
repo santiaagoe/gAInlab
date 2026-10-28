@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SessionEditor } from '../components/SessionEditor'
 import { getExercise } from '../engine/exercises'
 import { historyFor, prescribe } from '../engine/progression'
 import type { Plan, Session, Settings } from '../engine/types'
@@ -17,6 +18,7 @@ interface Props {
 export function Today({ plan, sessions, settings, targetDays, justFinished, onDismissFinished }: Props) {
   const suggested = nextDay(plan, sessions)
   const [dayId, setDayId] = useState(suggested.id)
+  const [editing, setEditing] = useState<Session | null>(null)
   const day = plan.days.find((d) => d.id === dayId) ?? suggested
   const week = sessionsThisWeek(sessions)
   const recent = sessions.slice(-4).reverse()
@@ -114,14 +116,21 @@ export function Today({ plan, sessions, settings, targetDays, justFinished, onDi
         {recent.length === 0 ? (
           <div className="empty">Tu primera sesión aparecerá aquí.</div>
         ) : (
-          recent.map((s) => (
-            <div className="history-item" key={s.id}>
-              <span>{s.dayName}</span>
-              <span className="muted">{relativeDay(s.date)}</span>
-            </div>
-          ))
+          <>
+            {recent.map((s) => (
+              <button className="history-btn" key={s.id} onClick={() => setEditing(s)}>
+                <span>{s.dayName}</span>
+                <span className="meta">
+                  {relativeDay(s.date)}, {s.exercises.reduce((n, e) => n + e.sets.length, 0)} series
+                </span>
+              </button>
+            ))}
+            <p className="small muted">Toca una sesión para corregir lo que anotaste.</p>
+          </>
         )}
       </section>
+
+      {editing && <SessionEditor session={editing} onClose={() => setEditing(null)} />}
     </>
   )
 }

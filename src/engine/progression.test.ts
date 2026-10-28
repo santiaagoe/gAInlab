@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { buildPlan } from './plan'
 import { getExercise } from './exercises'
-import { prescribe, roundDown, roundTo, type HistoryEntry } from './progression'
+import { prescribe, roundDown, roundTo, warmupSets, type HistoryEntry } from './progression'
 import type { ExerciseLog, Feel, PlanExercise, Profile, Settings } from './types'
 
-const settings: Settings = { incBarra: 2.5, incMancuerna: 2, incMaquina: 2.5 }
+const settings: Settings = { incBarra: 2.5, incMancuerna: 2, incMaquina: 2.5, sessionView: 'enfoque' }
 const bench: PlanExercise = {
   exerciseId: 'banca-barra',
   slot: 'pressHorizontal',
@@ -135,5 +135,33 @@ describe('buildPlan', () => {
     const plan = buildPlan({ ...base, goal: 'fuerza' })
     const main = plan.days[0].exercises[0]
     expect(main.repMax).toBeLessThanOrEqual(6)
+  })
+})
+
+describe('warmupSets', () => {
+  it('ramps a barbell lift from the empty bar', () => {
+    expect(warmupSets(60, 'barra', 2.5)).toEqual([
+      { weight: 20, reps: 10 },
+      { weight: 30, reps: 5 },
+      { weight: 40, reps: 3 },
+    ])
+  })
+
+  it('adds a single near the top for heavy work', () => {
+    const sets = warmupSets(100, 'barra', 2.5)
+    expect(sets[sets.length - 1]).toEqual({ weight: 85, reps: 1 })
+  })
+
+  it('skips warm-ups for light or bodyweight work', () => {
+    expect(warmupSets(25, 'barra', 2.5)).toEqual([])
+    expect(warmupSets(0, 'corporal', 2.5)).toEqual([])
+    expect(warmupSets(6, 'mancuerna', 2)).toEqual([])
+  })
+
+  it('uses two steps for machines', () => {
+    expect(warmupSets(80, 'maquina', 5)).toEqual([
+      { weight: 40, reps: 8 },
+      { weight: 60, reps: 4 },
+    ])
   })
 })

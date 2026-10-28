@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { ExercisePicker } from '../components/ExercisePicker'
+import { ExerciseEditor } from '../components/ExerciseEditor'
+import { AddExercisePicker, ExercisePicker } from '../components/ExercisePicker'
 import { getExercise } from '../engine/exercises'
 import type { Plan, Profile, Settings } from '../engine/types'
 import { kg } from '../format'
@@ -9,17 +10,19 @@ interface Props {
   plan: Plan
   profile: Profile
   settings: Settings
+  notes: Record<string, string>
   onRedoSurvey: () => void
 }
 
-const INCREMENTS: { key: keyof Settings; label: string; hint: string; options: number[] }[] = [
+const INCREMENTS: { key: 'incBarra' | 'incMancuerna' | 'incMaquina'; label: string; hint: string; options: number[] }[] = [
   { key: 'incBarra', label: 'Barra', hint: 'Lo mínimo que puedes sumar con discos', options: [1, 2.5, 5] },
   { key: 'incMancuerna', label: 'Mancuernas', hint: 'Salto entre una mancuerna y la siguiente', options: [1, 2, 2.5] },
   { key: 'incMaquina', label: 'Máquinas y poleas', hint: 'Salto entre placas', options: [2.5, 5] },
 ]
 
-export function SettingsScreen({ plan, profile, settings, onRedoSurvey }: Props) {
-  const [editing, setEditing] = useState<{ dayId: string; index: number } | null>(null)
+export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }: Props) {
+  const [editing, setEditing] = useState<{ dayId: string; index: number; swap?: boolean } | null>(null)
+  const [adding, setAdding] = useState<string | null>(null)
   const [confirmRedo, setConfirmRedo] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -81,11 +84,11 @@ export function SettingsScreen({ plan, profile, settings, onRedoSurvey }: Props)
                     <button
                       className="plan-edit"
                       onClick={() => setEditing({ dayId: day.id, index: i })}
-                      aria-label={`Cambiar ${getExercise(e.exerciseId).name}`}
+                      aria-label={`Editar ${getExercise(e.exerciseId).name}`}
                     >
                       <span>
                         {getExercise(e.exerciseId).name}
-                        <span className="edit-hint">Cambiar</span>
+                        <span className="edit-hint">Editar</span>
                       </span>
                       <span className="num">
                         {e.sets} × {e.repMin}–{e.repMax}
@@ -94,14 +97,20 @@ export function SettingsScreen({ plan, profile, settings, onRedoSurvey }: Props)
                   </li>
                 ))}
               </ol>
+              <button className="add-exercise" onClick={() => setAdding(day.id)}>
+                + Añadir ejercicio
+              </button>
             </div>
           ))}
         </div>
-        <p className="small muted">Toca un ejercicio para cambiarlo por otro. Al rehacer la encuesta conservas todo tu historial.</p>
+        <p className="small muted">
+          Toca un ejercicio para ajustar series, repeticiones y descanso, añadir una nota, cambiarlo o quitarlo. Al rehacer la encuesta
+          conservas todo tu historial.
+        </p>
         {confirmRedo && (
           <div className="stack" style={{ marginTop: 8 }}>
             <p className="small" style={{ margin: 0 }}>
-              Cambiaste ejercicios de tu rutina. Al rehacer la encuesta se genera una rutina nueva y esos cambios se pierden; tu historial se mantiene.
+              Modificaste tu rutina. Al rehacer la encuesta se genera una rutina nueva y esos cambios se pierden; tu historial se mantiene.
             </p>
             <button className="btn btn-primary" onClick={onRedoSurvey}>
               Rehacer encuesta
@@ -111,6 +120,30 @@ export function SettingsScreen({ plan, profile, settings, onRedoSurvey }: Props)
             </button>
           </div>
         )}
+      </section>
+
+      <section className="section">
+        <h2 className="h2">Durante el entrenamiento</h2>
+        <div className="row">
+          <div>
+            <div style={{ fontWeight: 600 }}>Vista de la sesión</div>
+            <div className="small muted">Uno a la vez muestra un ejercicio y te lleva al siguiente</div>
+          </div>
+          <div className="seg" role="group" aria-label="Vista de la sesión">
+            <button
+              aria-pressed={settings.sessionView === 'enfoque'}
+              onClick={() => actions.updateSettings({ ...settings, sessionView: 'enfoque' })}
+            >
+              Uno a la vez
+            </button>
+            <button
+              aria-pressed={settings.sessionView === 'lista'}
+              onClick={() => actions.updateSettings({ ...settings, sessionView: 'lista' })}
+            >
+              Lista
+            </button>
+          </div>
+        </div>
       </section>
 
       <section className="section">
@@ -180,7 +213,18 @@ export function SettingsScreen({ plan, profile, settings, onRedoSurvey }: Props)
         </div>
       </section>
 
-      {editing && (
+      {editing && !editing.swap && (
+        <ExerciseEditor
+          plan={plan}
+          dayId={editing.dayId}
+          index={editing.index}
+          note={notes[plan.days.find((d) => d.id === editing.dayId)?.exercises[editing.index]?.exerciseId ?? ''] ?? ''}
+          onSwap={() => setEditing({ ...editing, swap: true })}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
+      {editing?.swap && (
         <ExercisePicker
           plan={plan}
           profile={profile}
@@ -190,15 +234,27 @@ export function SettingsScreen({ plan, profile, settings, onRedoSurvey }: Props)
           mode="plan"
           onApply={(id) => {
             actions.replaceInPlan(editing.dayId, editing.index, id)
-            setEditing(null)
-            setMessage(`Rutina actualizada: ahora haces ${getExercise(id).name.toLowerCase()}.`)
+            setEditing({ ...editing, swap: false })
           }}
-          onClose={() => setEditing(null)}
+          onClose={() => setEditing({ ...editing, swap: false })}
+        />
+      )}
+
+      {adding && (
+        <AddExercisePicker
+          plan={plan}
+          profile={profile}
+          dayId={adding}
+          onAdd={(id) => {
+            actions.addToPlan(adding, id)
+            setAdding(null)
+          }}
+          onClose={() => setAdding(null)}
         />
       )}
 
       <p className="small muted" style={{ marginTop: 32, textAlign: 'center' }}>
-        gAInlab versión 0.1
+        gAInlab versión 0.2
       </p>
     </>
   )

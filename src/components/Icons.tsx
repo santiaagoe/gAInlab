@@ -46,3 +46,34 @@ export const IconSwap = (p: P) => (
     <path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
   </svg>
 )
+
+export const IconPrev = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M15 5l-7 7 7 7" />
+  </svg>
+)
+
+export const IconNext = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+)
+
+export const IconList = (p: P) => (
+  <svg {...base} width={18} height={18} {...p}>
+    <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+  </svg>
+)
+
+export const IconFocus = (p: P) => (
+  <svg {...base} width={18} height={18} {...p}>
+    <rect x="4" y="5" width="16" height="14" rx="3" />
+    <path d="M8 9h8M8 13h5" />
+  </svg>
+)
+
+export const IconClose = (p: P) => (
+  <svg {...base} width={18} height={18} {...p}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)

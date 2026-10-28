@@ -9,8 +9,9 @@ import {
   MUSCLE_ORDER,
   musclesOf,
 } from '../engine/exercises'
+import { entryFor } from '../engine/plan'
 import { checkSwap, type SwapLevel } from '../engine/swap'
-import type { Exercise, Plan, Profile } from '../engine/types'
+import type { Exercise, Plan, Profile, Slot } from '../engine/types'
 
 interface Props {
   plan: Plan
@@ -27,12 +28,12 @@ interface Props {
 
 const TONE: Record<SwapLevel, string> = { igual: 'up', parecido: 'ai', distinto: 'down', bloqueado: 'down' }
 
+/** Replace the exercise at one position of a day. */
 export function ExercisePicker({ plan, profile, dayId, index, currentId, mode, onApply, onClose }: Props) {
-  const [query, setQuery] = useState('')
   const [chosen, setChosen] = useState<string | null>(null)
   const current = getExercise(currentId)
   const day = plan.days.find((d) => d.id === dayId)
-  const takenInDay = new Set(day?.exercises.map((e, i) => (i === index ? '' : e.exerciseId)))
+  const taken = new Set(day?.exercises.map((e, i) => (i === index ? '' : e.exerciseId)))
 
   // The comparison uses what is in that position right now, even if it was swapped just for today.
   const effectivePlan: Plan = useMemo(
@@ -44,15 +45,6 @@ export function ExercisePicker({ plan, profile, dayId, index, currentId, mode, o
     }),
     [plan, dayId, index, currentId],
   )
-
-  const available = EXERCISES.filter((e) => e.equip.includes(profile.equipment) && e.id !== currentId)
-  const q = normalize(query.trim())
-  const matches = q ? available.filter((e) => normalize(`${e.name} ${listMuscles(musclesOf(e))}`).includes(q)) : available
-  const sameZone = matches.filter((e) => e.slot === current.slot)
-  const groups = MUSCLE_ORDER.map((m) => ({
-    muscle: m,
-    items: matches.filter((e) => mainMuscle(e) === m && e.slot !== current.slot),
-  })).filter((g) => g.items.length > 0)
 
   if (chosen) {
     const next = getExercise(chosen)
@@ -100,6 +92,102 @@ export function ExercisePicker({ plan, profile, dayId, index, currentId, mode, o
       <p className="muted small" style={{ margin: 0 }}>
         Trabaja {listMuscles(musclesOf(current))}. Cada ejercicio guarda su propio progreso.
       </p>
+      <ExerciseList profile={profile} exclude={currentId} taken={taken} sameSlot={current.slot} onPick={setChosen} />
+      <div className="sheet-actions">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancelar
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
+/** Add a new exercise at the end of a day. */
+export function AddExercisePicker({
+  plan,
+  profile,
+  dayId,
+  onAdd,
+  onClose,
+}: {
+  plan: Plan
+  profile: Profile
+  dayId: string
+  onAdd: (exerciseId: string) => void
+  onClose: () => void
+}) {
+  const [chosen, setChosen] = useState<string | null>(null)
+  const day = plan.days.find((d) => d.id === dayId)
+  const taken = new Set(day?.exercises.map((e) => e.exerciseId))
+
+  if (chosen && day) {
+    const next = getExercise(chosen)
+    const entry = entryFor(profile, next)
+    const risky = isAvoided(next, profile.injuries)
+    return (
+      <Sheet onClose={onClose}>
+        <p className="muted small" style={{ margin: 0 }}>
+          Añadir a {day.name}
+        </p>
+        <h2>{next.name}</h2>
+        <div className="note ai">
+          Trabaja {listMuscles(musclesOf(next))}. Se añade al final con {entry.sets} series de {entry.repMin}–{entry.repMax}{' '}
+          repeticiones; puedes ajustarlo después.
+        </div>
+        {risky.length > 0 && <div className="note down">Suele cargar una zona donde marcaste molestias.</div>}
+        {day.exercises.length >= 7 && (
+          <div className="note down">Este día ya tiene {day.exercises.length} ejercicios: la sesión se alargará.</div>
+        )}
+        <div className="sheet-actions">
+          <button className="btn btn-primary" onClick={() => onAdd(chosen)}>
+            Añadir a {day.name}
+          </button>
+          <button className="link" style={{ padding: 8 }} onClick={() => setChosen(null)}>
+            Elegir otro ejercicio
+          </button>
+        </div>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Sheet onClose={onClose}>
+      <h2>Añadir ejercicio{day ? ` a ${day.name}` : ''}</h2>
+      <ExerciseList profile={profile} taken={taken} onPick={setChosen} />
+      <div className="sheet-actions">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancelar
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
+function ExerciseList({
+  profile,
+  exclude,
+  taken,
+  sameSlot,
+  onPick,
+}: {
+  profile: Profile
+  exclude?: string
+  taken: Set<string>
+  sameSlot?: Slot
+  onPick: (id: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const available = EXERCISES.filter((e) => e.equip.includes(profile.equipment) && e.id !== exclude)
+  const q = normalize(query.trim())
+  const matches = q ? available.filter((e) => normalize(`${e.name} ${listMuscles(musclesOf(e))}`).includes(q)) : available
+  const sameZone = sameSlot ? matches.filter((e) => e.slot === sameSlot) : []
+  const groups = MUSCLE_ORDER.map((m) => ({
+    muscle: m,
+    items: matches.filter((e) => mainMuscle(e) === m && e.slot !== sameSlot),
+  })).filter((g) => g.items.length > 0)
+
+  return (
+    <>
       <input
         className="select search"
         type="search"
@@ -108,33 +196,28 @@ export function ExercisePicker({ plan, profile, dayId, index, currentId, mode, o
         onChange={(e) => setQuery(e.target.value)}
         aria-label="Buscar ejercicio o músculo"
       />
-
       {sameZone.length > 0 && (
         <div className="pick-group">
           <h3>Misma zona</h3>
           {sameZone.map((e) => (
-            <PickItem key={e.id} exercise={e} profile={profile} taken={takenInDay.has(e.id)} onPick={setChosen} />
+            <PickItem key={e.id} exercise={e} profile={profile} taken={taken.has(e.id)} onPick={onPick} />
           ))}
         </div>
       )}
-
       {groups.map((g) => (
         <div className="pick-group" key={g.muscle}>
           <h3>{capitalize(MUSCLE_NAMES[g.muscle])}</h3>
           {g.items.map((e) => (
-            <PickItem key={e.id} exercise={e} profile={profile} taken={takenInDay.has(e.id)} onPick={setChosen} />
+            <PickItem key={e.id} exercise={e} profile={profile} taken={taken.has(e.id)} onPick={onPick} />
           ))}
         </div>
       ))}
-
-      {matches.length === 0 && <div className="empty" style={{ marginTop: 16 }}>No hay ejercicios que coincidan con “{query}”.</div>}
-
-      <div className="sheet-actions">
-        <button className="btn btn-ghost" onClick={onClose}>
-          Cancelar
-        </button>
-      </div>
-    </Sheet>
+      {matches.length === 0 && (
+        <div className="empty" style={{ marginTop: 16 }}>
+          No hay ejercicios que coincidan con “{query}”.
+        </div>
+      )}
+    </>
   )
 }
 
@@ -161,7 +244,7 @@ function PickItem({
   )
 }
 
-function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="scrim" onClick={onClose}>
       <div className="sheet" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>

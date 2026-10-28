@@ -12,7 +12,7 @@ const Progress = lazy(() => import('./screens/Progress').then((m) => ({ default:
 type Tab = 'hoy' | 'progreso' | 'ajustes'
 
 export default function App() {
-  const { profile, plan, sessions, settings, active } = useApp()
+  const { profile, plan, sessions, settings, active, notes } = useApp()
   const [tab, setTab] = useState<Tab>('hoy')
   const [redo, setRedo] = useState(false)
   const [justFinished, setJustFinished] = useState<Session | null>(null)
@@ -41,6 +41,8 @@ export default function App() {
           active={active}
           plan={plan}
           profile={profile}
+          settings={settings}
+          notes={notes}
           onFinished={() => {
             const all = getState().sessions
             setJustFinished(all[all.length - 1] ?? null)
@@ -69,7 +71,7 @@ export default function App() {
             <Progress sessions={sessions} targetDays={profile.days} />
           </Suspense>
         )}
-        {tab === 'ajustes' && <SettingsScreen plan={plan} profile={profile} settings={settings} onRedoSurvey={() => setRedo(true)} />}
+        {tab === 'ajustes' && <SettingsScreen plan={plan} profile={profile} settings={settings} notes={notes} onRedoSurvey={() => setRedo(true)} />}
       </main>
       <nav className="nav" aria-label="Principal">
         <div className="nav-inner">

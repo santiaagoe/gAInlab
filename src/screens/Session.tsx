@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { IconCheck, IconSwap } from '../components/Icons'
 import { ExercisePicker } from '../components/ExercisePicker'
+import { IconCheck, IconFocus, IconList, IconNext, IconPrev, IconSwap } from '../components/Icons'
+import { NumField } from '../components/NumField'
 import { getExercise } from '../engine/exercises'
-import type { Feel, Plan, Profile, SetLog } from '../engine/types'
+import { incrementFor, warmupSets } from '../engine/progression'
+import type { Feel, Plan, Profile, SetLog, Settings } from '../engine/types'
 import { kg, relativeDay, setsText, toneFor } from '../format'
 import { actions, type ActiveExercise, type ActiveSession } from '../store'
 
@@ -12,21 +14,23 @@ interface Rest {
   label: string
 }
 
-export function SessionScreen({
-  active,
-  plan,
-  profile,
-  onFinished,
-}: {
+interface Props {
   active: ActiveSession
   plan: Plan
   profile: Profile
+  settings: Settings
+  notes: Record<string, string>
   onFinished: () => void
-}) {
+}
+
+export function SessionScreen({ active, plan, profile, settings, notes, onFinished }: Props) {
   const [rest, setRest] = useState<Rest | null>(null)
   const [swapIndex, setSwapIndex] = useState<number | null>(null)
   const [confirm, setConfirm] = useState(false)
   const elapsed = useElapsed(active.startedAt)
+  const focus = settings.sessionView === 'enfoque'
+  const current = Math.min(active.current ?? 0, active.exercises.length - 1)
+  const isLast = current === active.exercises.length - 1
 
   const totals = active.exercises.reduce(
     (acc, ex) => ({ done: acc.done + ex.sets.filter((s) => s.done).length, all: acc.all + ex.sets.length }),
@@ -44,6 +48,30 @@ export function SessionScreen({
     }
   }
 
+  const go = (index: number) => {
+    actions.setCurrent(index)
+    window.scrollTo({ top: 0 })
+  }
+
+  const nextName = (i: number) => {
+    const next = active.exercises[i + 1]
+    return next ? getExercise(next.exerciseId).name : null
+  }
+
+  const block = (ex: ActiveExercise, i: number) => (
+    <ExerciseBlock
+      key={`${i}-${ex.exerciseId}`}
+      ex={ex}
+      index={i}
+      total={active.exercises.length}
+      settings={settings}
+      note={notes[ex.exerciseId] ?? ''}
+      nextName={nextName(i)}
+      onRest={startRest}
+      onSwap={() => setSwapIndex(i)}
+    />
+  )
+
   return (
     <>
       <header className="session-bar">
@@ -53,24 +81,52 @@ export function SessionScreen({
             {elapsed} min, {totals.done} de {totals.all} series
           </div>
         </div>
-        <button className="btn btn-primary" onClick={finish}>
-          Terminar
-        </button>
+        <div className="session-actions">
+          <button
+            className="icon-btn"
+            onClick={() => actions.updateSettings({ ...settings, sessionView: focus ? 'lista' : 'enfoque' })}
+            aria-label={focus ? 'Ver todos los ejercicios en lista' : 'Ver un ejercicio a la vez'}
+            title={focus ? 'Ver en lista' : 'Ver uno a la vez'}
+          >
+            {focus ? <IconList /> : <IconFocus />}
+          </button>
+          <button className="btn btn-primary" onClick={finish}>
+            Terminar
+          </button>
+        </div>
       </header>
 
-      {active.exercises.map((ex, i) => (
-        <ExerciseBlock
-          key={`${i}-${ex.exerciseId}`}
-          ex={ex}
-          index={i}
-          onRest={startRest}
-          onSwap={() => setSwapIndex(i)}
+      {focus ? (
+        <>
+          <ExerciseStrip active={active} current={current} onSelect={go} />
+          <Swipe onPrev={() => current > 0 && go(current - 1)} onNext={() => !isLast && go(current + 1)}>
+            {block(active.exercises[current], current)}
+          </Swipe>
+          <div style={{ height: 96 + (rest ? 76 : 0) }} />
+          <FocusNav
+            current={current}
+            ex={active.exercises[current]}
+            nextName={nextName(current)}
+            onPrev={() => go(current - 1)}
+            onNext={() => go(current + 1)}
+            onFinish={finish}
+          />
+        </>
+      ) : (
+        <>
+          {active.exercises.map(block)}
+          <div style={{ height: rest ? 88 : 0 }} />
+        </>
+      )}
+
+      {rest && (
+        <RestTimer
+          rest={rest}
+          raised={focus}
+          onAdd={() => setRest({ ...rest, endsAt: rest.endsAt + 30_000, total: rest.total + 30 })}
+          onClose={() => setRest(null)}
         />
-      ))}
-
-      <div style={{ height: rest ? 88 : 0 }} />
-
-      {rest && <RestTimer rest={rest} onAdd={() => setRest({ ...rest, endsAt: rest.endsAt + 30_000, total: rest.total + 30 })} onClose={() => setRest(null)} />}
+      )}
 
       {swapIndex !== null && (
         <ExercisePicker
@@ -99,7 +155,9 @@ export function SessionScreen({
             ) : (
               <>
                 <h2>Te quedan {totals.all - totals.done} series sin marcar</h2>
-                <p className="muted small">Guardamos solo las series marcadas. Las que faltan cuentan como no hechas para calcular tu próxima sesión.</p>
+                <p className="muted small">
+                  Guardamos solo las series marcadas. Las que faltan cuentan como no hechas para calcular tu próxima sesión.
+                </p>
               </>
             )}
             <div className="sheet-actions">
@@ -128,14 +186,126 @@ export function SessionScreen({
   )
 }
 
+/* ---------- Focus mode ---------- */
+
+function ExerciseStrip({ active, current, onSelect }: { active: ActiveSession; current: number; onSelect: (i: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('[aria-current="step"]')
+    el?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+  }, [current])
+
+  return (
+    <nav className="strip" ref={ref} aria-label="Ejercicios de la sesión">
+      {active.exercises.map((ex, i) => {
+        const done = ex.sets.filter((s) => s.done).length
+        const complete = done === ex.sets.length && ex.sets.length > 0
+        return (
+          <button
+            key={`${i}-${ex.exerciseId}`}
+            className={`strip-item${complete ? ' complete' : ''}`}
+            aria-current={i === current ? 'step' : undefined}
+            onClick={() => onSelect(i)}
+          >
+            <span className="strip-num num">{complete ? <IconCheck width={14} height={14} /> : i + 1}</span>
+            <span className="strip-name">{getExercise(ex.exerciseId).name}</span>
+            <span className="strip-sets num">
+              {done}/{ex.sets.length}
+            </span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+function FocusNav({
+  current,
+  ex,
+  nextName,
+  onPrev,
+  onNext,
+  onFinish,
+}: {
+  current: number
+  ex: ActiveExercise
+  nextName: string | null
+  onPrev: () => void
+  onNext: () => void
+  onFinish: () => void
+}) {
+  const complete = ex.sets.every((s) => s.done)
+  return (
+    <div className="focus-nav">
+      <div className="focus-nav-inner">
+        <button className="btn btn-ghost focus-prev" onClick={onPrev} disabled={current === 0} aria-label="Ejercicio anterior">
+          <IconPrev />
+        </button>
+        {nextName ? (
+          <button className={`btn ${complete ? 'btn-primary' : 'btn-ghost'} focus-next`} onClick={onNext}>
+            <span className="focus-next-text">
+              <small>Siguiente</small>
+              {nextName}
+            </span>
+            <IconNext />
+          </button>
+        ) : (
+          <button className={`btn ${complete ? 'btn-primary' : 'btn-ghost'} focus-next`} onClick={onFinish}>
+            Terminar entrenamiento
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Horizontal swipe to move between exercises, ignored while typing in a field. */
+function Swipe({ children, onPrev, onNext }: { children: React.ReactNode; onPrev: () => void; onNext: () => void }) {
+  const start = useRef<{ x: number; y: number } | null>(null)
+  return (
+    <div
+      onTouchStart={(e) => {
+        const target = e.target as HTMLElement
+        if (target.closest('input, textarea, button')) {
+          start.current = null
+          return
+        }
+        start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      }}
+      onTouchEnd={(e) => {
+        if (!start.current) return
+        const dx = e.changedTouches[0].clientX - start.current.x
+        const dy = e.changedTouches[0].clientY - start.current.y
+        start.current = null
+        if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+        if (dx < 0) onNext()
+        else onPrev()
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+/* ---------- Exercise ---------- */
+
 function ExerciseBlock({
   ex,
   index,
+  total,
+  settings,
+  note,
+  nextName,
   onRest,
   onSwap,
 }: {
   ex: ActiveExercise
   index: number
+  total: number
+  settings: Settings
+  note: string
+  nextName: string | null
   onRest: (seconds: number, label: string) => void
   onSwap: () => void
 }) {
@@ -145,6 +315,10 @@ function ExerciseBlock({
   const bodyweight = info.kind === 'corporal'
   const [invalid, setInvalid] = useState<number | null>(null)
   const anyDone = ex.sets.some((s) => s.done)
+  const nextSet = ex.sets.findIndex((s) => !s.done)
+
+  const showWarmup = info.compound && ex.plan.role !== 'accesorio'
+  const warmup = showWarmup ? warmupSets(ex.sets[0]?.weight ?? 0, info.kind, incrementFor(info.kind, settings)) : []
 
   const changeWeight = (setIndex: number, weight: number) => {
     const old = ex.sets[setIndex].weight
@@ -167,13 +341,17 @@ function ExerciseBlock({
     }
     actions.updateSet(index, setIndex, { done: true })
     const remaining = ex.sets.filter((x, j) => j !== setIndex && !x.done).length
-    onRest(ex.plan.rest, remaining > 0 ? 'Descanso' : 'Siguiente ejercicio')
+    const label = remaining > 0 ? `Descanso, ${remaining === 1 ? 'falta 1 serie' : `faltan ${remaining} series`}` : nextName ? 'Ejercicio listo' : 'Última serie lista'
+    onRest(ex.plan.rest, label)
   }
 
   return (
     <section className="ex" aria-labelledby={`ex-${index}`}>
       <div className="ex-head">
         <div>
+          <div className="small muted num">
+            Ejercicio {index + 1} de {total}
+          </div>
           <h2 id={`ex-${index}`}>{info.name}</h2>
           <div className="small muted num">
             {ex.plan.sets} series de {ex.plan.repMin}–{ex.plan.repMax} reps
@@ -192,6 +370,15 @@ function ExerciseBlock({
         </div>
       )}
 
+      <NoteLine exerciseId={ex.exerciseId} note={note} />
+
+      {warmup.length > 0 && (
+        <div className="warmup">
+          <span className="warmup-label">Calentamiento</span>
+          <span className="num">{warmup.map((w) => `${kg(w.weight)} kg × ${w.reps}`).join(', ')}</span>
+        </div>
+      )}
+
       <div className="sets">
         <div className="set-row set-head" aria-hidden>
           <span className="idx">#</span>
@@ -200,7 +387,7 @@ function ExerciseBlock({
           <span />
         </div>
         {ex.sets.map((s, j) => (
-          <div className={`set-row${s.done ? ' done' : ''}`} key={j}>
+          <div className={`set-row${s.done ? ' done' : ''}${j === nextSet ? ' next' : ''}`} key={j}>
             <span className="idx num">{j + 1}</span>
             <NumField
               value={s.weight}
@@ -230,7 +417,11 @@ function ExerciseBlock({
           </div>
         ))}
       </div>
-      {invalid !== null && <p className="small" style={{ color: 'var(--down)', margin: '8px 0 0' }}>Anota el peso y las repeticiones antes de marcar la serie.</p>}
+      {invalid !== null && (
+        <p className="small" style={{ color: 'var(--down)', margin: '8px 0 0' }}>
+          Anota el peso y las repeticiones antes de marcar la serie.
+        </p>
+      )}
       <button className="add-set" onClick={() => actions.addSet(index)}>
         + Añadir serie
       </button>
@@ -258,59 +449,60 @@ function ExerciseBlock({
   )
 }
 
-function NumField({
-  value,
-  unit,
-  decimal,
-  placeholder,
-  invalid,
-  label,
-  onChange,
-}: {
-  value: number
-  unit: string
-  decimal?: boolean
-  placeholder?: string
-  invalid?: boolean
-  label: string
-  onChange: (v: number) => void
-}) {
-  const [text, setText] = useState(value > 0 ? kg(value) : '')
-  const focused = useRef(false)
+function NoteLine({ exerciseId, note }: { exerciseId: string; note: string }) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(note)
 
-  useEffect(() => {
-    if (!focused.current) setText(value > 0 ? kg(value) : '')
-  }, [value])
+  if (editing) {
+    return (
+      <div className="note-edit">
+        <textarea
+          autoFocus
+          rows={2}
+          value={text}
+          placeholder="Ej.: asiento en el 4, agarre cerrado"
+          onChange={(e) => setText(e.target.value)}
+          aria-label="Nota del ejercicio"
+        />
+        <div className="note-edit-actions">
+          <button
+            className="link"
+            onClick={() => {
+              setText(note)
+              setEditing(false)
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            className="link"
+            onClick={() => {
+              actions.setNote(exerciseId, text)
+              setEditing(false)
+            }}
+          >
+            Guardar nota
+          </button>
+        </div>
+      </div>
+    )
+  }
 
-  return (
-    <label className={`field${invalid ? ' invalid' : ''}`}>
-      <input
-        type="text"
-        inputMode={decimal ? 'decimal' : 'numeric'}
-        aria-label={label}
-        placeholder={placeholder}
-        value={text}
-        onFocus={(e) => {
-          focused.current = true
-          e.target.select()
-        }}
-        onBlur={() => {
-          focused.current = false
-          setText(value > 0 ? kg(value) : '')
-        }}
-        onChange={(e) => {
-          const raw = e.target.value.replace(/[^\d.,]/g, '')
-          setText(raw)
-          const parsed = parseFloat(raw.replace(',', '.'))
-          onChange(Number.isFinite(parsed) ? (decimal ? parsed : Math.round(parsed)) : 0)
-        }}
-      />
-      <span>{unit}</span>
-    </label>
+  return note ? (
+    <button className="my-note" onClick={() => setEditing(true)}>
+      <span className="my-note-label">Tu nota</span>
+      {note}
+    </button>
+  ) : (
+    <button className="add-note" onClick={() => setEditing(true)}>
+      + Añadir nota
+    </button>
   )
 }
 
-function RestTimer({ rest, onAdd, onClose }: { rest: Rest; onAdd: () => void; onClose: () => void }) {
+/* ---------- Rest timer ---------- */
+
+function RestTimer({ rest, raised, onAdd, onClose }: { rest: Rest; raised: boolean; onAdd: () => void; onClose: () => void }) {
   const [now, setNow] = useState(Date.now())
   const alerted = useRef(false)
 
@@ -339,7 +531,7 @@ function RestTimer({ rest, onAdd, onClose }: { rest: Rest; onAdd: () => void; on
   const ratio = Math.max(0, Math.min(1, left / rest.total))
 
   return (
-    <div className={`timer${over ? ' over' : ''}`} role="timer" aria-live="off">
+    <div className={`timer${over ? ' over' : ''}${raised ? ' raised' : ''}`} role="timer" aria-live="off">
       <div className="timer-fill" style={{ transform: `scaleX(${ratio})` }} />
       <span className="timer-time num">{time}</span>
       <span className="timer-label">{over ? '¡A darle!' : rest.label}</span>

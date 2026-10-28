@@ -82,3 +82,22 @@ export function checkSwap(plan: Plan, dayId: string, index: number, nextId: stri
 
   return { level, title, warnings }
 }
+
+/** Muscles that would lose all weekly work if the exercise at that position were removed. */
+export function checkRemoval(plan: Plan, dayId: string, index: number): string[] {
+  const day = plan.days.find((d) => d.id === dayId)
+  const target = day?.exercises[index]
+  if (!day || !target) return []
+  const warnings: string[] = []
+  if (day.exercises.length === 1) warnings.push(`Es el único ejercicio de ${day.name}.`)
+  const remaining = new Set<Muscle>()
+  plan.days.forEach((d) =>
+    d.exercises.forEach((e, i) => {
+      if (d.id === dayId && i === index) return
+      musclesOf(getExercise(e.exerciseId)).slice(0, 2).forEach((m) => remaining.add(m))
+    }),
+  )
+  const lost = musclesOf(getExercise(target.exerciseId)).slice(0, 2).filter((m) => !remaining.has(m))
+  if (lost.length > 0) warnings.push(`Tu rutina quedaría sin ejercicios para ${listMuscles(lost)} en toda la semana.`)
+  return warnings
+}
