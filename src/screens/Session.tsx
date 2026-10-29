@@ -4,7 +4,7 @@ import { IconCheck, IconFocus, IconList, IconNext, IconPrev, IconSwap } from '..
 import { NumField } from '../components/NumField'
 import { getExercise } from '../engine/exercises'
 import { incrementFor, warmupSets } from '../engine/progression'
-import type { Feel, Plan, Profile, SetLog, Settings } from '../engine/types'
+import type { AgeGroup, Feel, Plan, Profile, SetLog, Settings } from '../engine/types'
 import { kg, relativeDay, setsText, toneFor } from '../format'
 import { actions, type ActiveExercise, type ActiveSession } from '../store'
 
@@ -65,6 +65,7 @@ export function SessionScreen({ active, plan, profile, settings, notes, onFinish
       index={i}
       total={active.exercises.length}
       settings={settings}
+      age={profile.age}
       note={notes[ex.exerciseId] ?? ''}
       nextName={nextName(i)}
       onRest={startRest}
@@ -295,6 +296,7 @@ function ExerciseBlock({
   index,
   total,
   settings,
+  age,
   note,
   nextName,
   onRest,
@@ -304,6 +306,7 @@ function ExerciseBlock({
   index: number
   total: number
   settings: Settings
+  age?: AgeGroup
   note: string
   nextName: string | null
   onRest: (seconds: number, label: string) => void
@@ -318,7 +321,7 @@ function ExerciseBlock({
   const nextSet = ex.sets.findIndex((s) => !s.done)
 
   const showWarmup = info.compound && ex.plan.role !== 'accesorio'
-  const warmup = showWarmup ? warmupSets(ex.sets[0]?.weight ?? 0, info.kind, incrementFor(info.kind, settings)) : []
+  const warmup = showWarmup ? warmupSets(ex.sets[0]?.weight ?? 0, info.kind, incrementFor(info.kind, settings), age) : []
 
   const changeWeight = (setIndex: number, weight: number) => {
     const old = ex.sets[setIndex].weight

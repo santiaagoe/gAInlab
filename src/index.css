@@ -297,6 +297,14 @@ h3 {
   margin-top: 2px;
 }
 
+.options.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.options.grid-2 .option strong {
+  text-align: center;
+}
+
 .options.grid-3 .option {
   text-align: center;
   padding: 18px 8px;
@@ -397,6 +405,18 @@ h3 {
 }
 
 /* ---------- Today ---------- */
+
+.age-card {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1.5px solid var(--ai);
+}
+
+.age-card p {
+  margin: 4px 0 12px;
+}
 
 .week {
   display: flex;

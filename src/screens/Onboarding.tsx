@@ -1,21 +1,22 @@
 import { useState } from 'react'
 import { PlanEditor } from '../components/PlanEditor'
+import { AGE_GROUPS, AGE_LABELS } from '../engine/age'
 import { buildPlan } from '../engine/plan'
 import { emptyDays, emptyPlan } from '../engine/planEdit'
-import type { Equipment, Experience, Goal, Injury, Plan, Profile, Situation } from '../engine/types'
+import type { AgeGroup, Equipment, Experience, Goal, Injury, Plan, Profile, Situation } from '../engine/types'
 import { actions, useApp } from '../store'
 
 type Mode = 'generar' | 'propio'
 
-type Step = 'modo' | 'goal' | 'experience' | 'situation' | 'days' | 'minutes' | 'equipment' | 'injuries' | 'plan' | 'builder'
+type Step = 'modo' | 'goal' | 'age' | 'experience' | 'situation' | 'days' | 'minutes' | 'equipment' | 'injuries' | 'plan' | 'builder'
 
 const FLOWS: Record<Mode, Step[]> = {
-  generar: ['modo', 'goal', 'experience', 'situation', 'days', 'minutes', 'equipment', 'injuries', 'plan'],
-  propio: ['modo', 'goal', 'days', 'equipment', 'injuries', 'builder'],
+  generar: ['modo', 'goal', 'age', 'experience', 'situation', 'days', 'minutes', 'equipment', 'injuries', 'plan'],
+  propio: ['modo', 'goal', 'age', 'days', 'equipment', 'injuries', 'builder'],
 }
 
 const MODES: Option<Mode>[] = [
-  { value: 'generar', label: 'Arma un plan para mí', hint: 'Respondes 7 preguntas y te propongo una rutina que puedes ajustar' },
+  { value: 'generar', label: 'Arma un plan para mí', hint: 'Respondes 8 preguntas y te propongo una rutina que puedes ajustar' },
   { value: 'propio', label: 'Ya tengo un plan', hint: 'Copias tu rutina y gAInlab calcula el peso de cada sesión' },
 ]
 
@@ -44,6 +45,8 @@ const SITUATION: Option<Situation>[] = [
   { value: 'cero', label: 'Empiezo desde cero', hint: 'Aprendes la técnica con pesos livianos' },
 ]
 
+const AGES: Option<AgeGroup>[] = AGE_GROUPS.map((g) => ({ value: g, label: AGE_LABELS[g] }))
+
 const DAYS: Option<number>[] = [2, 3, 4, 5, 6].map((d) => ({ value: d, label: String(d) }))
 const MINUTES: Option<number>[] = [30, 45, 60, 75, 90].map((m) => ({ value: m, label: String(m) }))
 
@@ -62,6 +65,7 @@ const INJURIES: Option<Injury>[] = [
 interface Draft {
   mode?: Mode
   goal?: Goal
+  age?: AgeGroup
   experience?: Experience
   situation?: Situation
   days?: number
@@ -147,6 +151,14 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
           lede={own ? 'Lo usamos para proponer series y repeticiones cuando añadas un ejercicio.' : undefined}
         >
           <Choices options={GOALS} value={draft.goal} onPick={(v) => choose('goal', v)} />
+        </Question>
+      )}
+      {step === 'age' && (
+        <Question
+          title="¿Cuántos años tienes?"
+          lede="No todas las edades progresan igual: con esto ajustamos los saltos de peso, los descansos y el regreso tras una pausa."
+        >
+          <Choices options={AGES} value={draft.age} onPick={(v) => choose('age', v)} cols={2} />
         </Question>
       )}
       {step === 'experience' && (
@@ -264,10 +276,11 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
 
 function profileFrom(d: Draft, initial?: Profile): Profile | null {
   const own = d.mode === 'propio'
-  if (!d.goal || !d.days || !d.equipment) return null
+  if (!d.goal || !d.age || !d.days || !d.equipment) return null
   if (!own && (!d.experience || !d.situation || !d.minutes)) return null
   return {
     goal: d.goal,
+    age: d.age,
     experience: d.experience ?? 'menos1',
     situation: d.situation ?? 'entreno',
     days: d.days,
@@ -293,14 +306,16 @@ function Choices<T>({
   value,
   onPick,
   grid,
+  cols,
 }: {
   options: Option<T>[]
   value?: T
   onPick: (v: T) => void
   grid?: boolean
+  cols?: 2
 }) {
   return (
-    <div className={`options${grid ? ' grid-3' : ''}`}>
+    <div className={`options${grid ? ' grid-3' : ''}${cols === 2 ? ' grid-2' : ''}`}>
       {options.map((o) => (
         <button key={String(o.value)} className="option" aria-pressed={value === o.value} onClick={() => onPick(o.value)}>
           {grid ? (

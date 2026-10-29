@@ -17,6 +17,11 @@ gAInlab es una app web instalable (PWA) para entrenar en el gimnasio con progres
   - Bajo el rango: repite el peso; si pasa dos veces seguidas, baja un 10%.
   - Calibración muy lejos del rango: recalcula el peso con el 1RM estimado (Epley) y cómo se sintió.
   - Modo regreso: tras 2+ semanas sin un ejercicio, baja un 10–30% según la pausa.
+- **Ajustes por edad** (7 grupos, de menos de 18 a 70 o más):
+  - Plan: rangos de 6+ repeticiones para menores de 18 y desde los 50 (8+ desde los 60), menos series máximas en los básicos, más descanso entre series desde los 40, y máquinas o mancuernas en vez de los básicos con barra más técnicos para principiantes de 60+.
+  - Progresión: sin doble salto de peso para menores de 18 y desde los 50; si se llega al tope "al límite", se consolida una sesión antes de subir.
+  - Modo regreso antes y más prudente con la edad (desde 10–12 días sin entrenar y hasta un 10% extra de bajada).
+  - Calentamiento sin series de 1 repetición pesadas y con una serie extra liviana desde los 50.
 - **Modo entrenamiento**: un ejercicio a la vez, barra con todos los ejercicios y su avance, botón "Siguiente" que se destaca al terminar las series y deslizar para cambiar de ejercicio. También hay vista de lista.
 - **Sesión en el gimnasio**: valores prellenados, serie actual destacada, marcar series con un toque, temporizador de descanso con vibración, series de calentamiento sugeridas y notas por ejercicio.
 - **Rutina editable**: cambiar un ejercicio (solo hoy o en la rutina) con aviso si no trabaja la misma zona; ajustar series, rango, descanso y orden; añadir y quitar ejercicios y días; crear ejercicios que no están en la biblioteca.
@@ -46,6 +51,7 @@ src/
     exercises.ts # biblioteca de ejercicios por patrón de movimiento
     plan.ts      # encuesta → rutina (plantillas + reglas)
     planEdit.ts  # ediciones puras del plan (cambiar, añadir, quitar, días)
+    age.ts       # reglas por grupo de edad
     swap.ts      # avisos de zona muscular al cambiar o quitar ejercicios
     progression.ts # calibración, doble progresión, modo regreso
   screens/       # Onboarding, Hoy, Sesión, Progreso, Ajustes

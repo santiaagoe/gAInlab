@@ -1,3 +1,4 @@
+import { ageRules, ageSummary } from './age'
 import { optionsForSlot } from './exercises'
 import type { Exercise, Goal, Plan, PlanDay, PlanExercise, Profile, Role, Slot } from './types'
 
@@ -206,22 +207,36 @@ export function doseFor(profile: Profile, role: Role): Dose {
     base.sets = Math.min(base.sets + 1, 5)
   }
   if (profile.minutes <= 30 && role === 'accesorio') base.sets = Math.min(base.sets, 2)
+
+  const age = ageRules(profile.age)
+  if (base.repMin < age.minReps) {
+    base.repMin = age.minReps
+    base.repMax = Math.max(base.repMax, age.minReps + (age.minReps >= 8 ? 4 : 2))
+  }
+  if (role === 'principal') base.sets = Math.min(base.sets, age.maxMainSets)
+  if (role !== 'accesorio') base.rest += age.extraRest
   return base
 }
+
+/** Technical barbell lifts that older beginners swap for machines or dumbbells. */
+const SAFER_SLOTS: Slot[] = ['sentadilla', 'bisagra', 'pressVertical']
 
 export function buildPlan(profile: Profile): Plan {
   const days = Math.min(6, Math.max(2, profile.days))
   const split = SPLITS[days]
   const limit = maxExercisesFor(profile.minutes)
+  const safer = ageRules(profile.age).preferSafeVariants && profile.experience !== 'mas1'
 
   const planDays: PlanDay[] = split.days.map((tpl, index) => {
     const used = new Set<string>()
     const exercises: PlanExercise[] = []
     for (const spec of tpl.slots) {
       if (exercises.length >= limit) break
-      const options = optionsForSlot(spec.slot, profile.equipment, profile.injuries).filter(
-        (e) => !used.has(e.id),
-      )
+      let options = optionsForSlot(spec.slot, profile.equipment, profile.injuries).filter((e) => !used.has(e.id))
+      if (safer && SAFER_SLOTS.includes(spec.slot)) {
+        const easy = options.filter((e) => e.kind !== 'barra')
+        if (easy.length > 0) options = [...easy, ...options.filter((e) => e.kind === 'barra')]
+      }
       if (options.length === 0) continue
       const pick = options[Math.min(spec.variant ?? 0, options.length - 1)]
       used.add(pick.id)
@@ -246,13 +261,20 @@ const GOAL_TEXT: Record<Goal, string> = {
 }
 
 function summaryFor(profile: Profile): string {
-  const parts = [GOAL_TEXT[profile.goal]]
+  const lowReps = profile.goal === 'fuerza' && ageRules(profile.age).minReps > 4
+  const parts = [
+    lowReps
+      ? 'Enfocado en fuerza: los ejercicios básicos llevan los descansos más largos, que es donde más vas a progresar.'
+      : GOAL_TEXT[profile.goal],
+  ]
   if (profile.situation === 'regreso') {
     parts.push('Como vuelves de una pausa, la primera sesión de cada ejercicio sirve para calibrar con pesos cómodos.')
   }
   if (profile.injuries.length > 0) {
     parts.push('Evitamos los ejercicios que suelen cargar las zonas donde tienes molestias.')
   }
+  const age = ageSummary(profile.age)
+  if (age) parts.push(age)
   return parts.join(' ')
 }
 

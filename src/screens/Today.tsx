@@ -3,7 +3,8 @@ import { SessionEditor } from '../components/SessionEditor'
 import { getExercise } from '../engine/exercises'
 import { dayFocus } from '../engine/planEdit'
 import { historyFor, prescribe } from '../engine/progression'
-import type { Plan, Session, Settings } from '../engine/types'
+import { AGE_GROUPS, AGE_LABELS } from '../engine/age'
+import type { AgeGroup, Plan, Session, Settings } from '../engine/types'
 import { chipText, kg, relativeDay, sessionsThisWeek, toneFor } from '../format'
 import { actions, nextDay } from '../store'
 
@@ -12,11 +13,12 @@ interface Props {
   sessions: Session[]
   settings: Settings
   targetDays: number
+  age?: AgeGroup
   justFinished: Session | null
   onDismissFinished: () => void
 }
 
-export function Today({ plan, sessions, settings, targetDays, justFinished, onDismissFinished }: Props) {
+export function Today({ plan, sessions, settings, targetDays, age, justFinished, onDismissFinished }: Props) {
   const suggested = nextDay(plan, sessions)
   const [dayId, setDayId] = useState(suggested.id)
   const [editing, setEditing] = useState<Session | null>(null)
@@ -43,6 +45,22 @@ export function Today({ plan, sessions, settings, targetDays, justFinished, onDi
         </span>
       </div>
 
+      {!age && (
+        <div className="age-card">
+          <strong>¿Cuántos años tienes?</strong>
+          <p className="small muted">
+            No todas las edades progresan igual. Con tu edad ajustamos los saltos de peso, los descansos y el regreso tras una pausa.
+          </p>
+          <div className="chips" role="group" aria-label="Edad">
+            {AGE_GROUPS.map((g) => (
+              <button key={g} onClick={() => actions.updateProfile({ age: g })}>
+                {AGE_LABELS[g]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {justFinished && (
         <div className="banner" role="status">
           <span>
@@ -63,7 +81,7 @@ export function Today({ plan, sessions, settings, targetDays, justFinished, onDi
         <div className="rx-list">
           {day.exercises.map((pe) => {
             const ex = getExercise(pe.exerciseId)
-            const rx = prescribe(pe, historyFor(pe.exerciseId, sessions), settings)
+            const rx = prescribe(pe, historyFor(pe.exerciseId, sessions), settings, new Date(), age)
             const tone = toneFor(rx.mode)
             const reps = rx.reps.every((r) => r === rx.reps[0]) ? `${rx.reps.length} × ${rx.reps[0]}` : rx.reps.join(', ')
             return (

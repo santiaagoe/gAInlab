@@ -62,6 +62,7 @@ export default function App() {
             sessions={sessions}
             settings={settings}
             targetDays={plan.days.length}
+            age={profile.age}
             justFinished={justFinished}
             onDismissFinished={() => setJustFinished(null)}
           />

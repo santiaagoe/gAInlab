@@ -1,5 +1,6 @@
+import { ageRules } from './age'
 import { findExercise } from './exercises'
-import type { ExerciseLog, Feel, Kind, PlanExercise, Prescription, Session, Settings } from './types'
+import type { AgeGroup, ExerciseLog, Feel, Kind, PlanExercise, Prescription, Session, Settings } from './types'
 
 export interface HistoryEntry {
   date: string
@@ -95,7 +96,9 @@ export function prescribe(
   history: HistoryEntry[],
   settings: Settings,
   now: Date = new Date(),
+  age?: AgeGroup,
 ): Prescription {
+  const rules = ageRules(age)
   const exercise = findExercise(plan.exerciseId)
   const kind: Kind = exercise?.kind ?? 'maquina'
   const compound = exercise?.compound ?? false
@@ -123,8 +126,8 @@ export function prescribe(
   const gapDays = Math.floor((now.getTime() - new Date(last.date).getTime()) / DAY_MS)
 
   // Modo regreso: long gap since this exercise was last trained.
-  if (gapDays >= 14 && w > 0) {
-    const factor = gapDays >= 56 ? 0.7 : gapDays >= 28 ? 0.8 : 0.9
+  if (gapDays >= rules.returnAfterDays && w > 0) {
+    const factor = (gapDays >= 56 ? 0.7 : gapDays >= 28 ? 0.8 : 0.9) - rules.returnExtra
     const weight = Math.max(step, roundDown(w * factor, step))
     const weeks = Math.floor(gapDays / 7)
     return {
@@ -180,8 +183,27 @@ export function prescribe(
   }
 
   const allTop = summary.reps.length >= sets && summary.reps.slice(0, sets).every((r) => r >= repMax)
+  // Hold once at the top when it was a max effort; if the previous session already held this weight, go up.
+  const prevEntry = history.length >= 2 ? history[history.length - 2] : undefined
+  const prevAtTop = prevEntry
+    ? (() => {
+        const ps = workSummary(prevEntry.log)
+        return ps.weight === w && ps.reps.length >= sets && ps.reps.slice(0, sets).every((r) => r >= repMax)
+      })()
+    : false
+  if (allTop && feel === 'limite' && rules.consolidateAtLimit && !prevAtTop) {
+    return {
+      ...base,
+      mode: 'mantener',
+      weight: w,
+      reps: fill(sets, repMax),
+      delta: 0,
+      note: `Llegaste a ${repMax} repeticiones, pero al límite: repite ${formatKg(w)} una sesión más y, si sale con algo de margen, subimos.`,
+    }
+  }
+
   if (allTop) {
-    const jump = feel === 'facil' && compound ? step * 2 : step
+    const jump = feel === 'facil' && compound && rules.doubleJump ? step * 2 : step
     const weight = roundTo(w + jump, step)
     return {
       ...base,
@@ -249,8 +271,9 @@ const BAR_KG = 20
  * Ramp-up sets before the working weight of a compound lift.
  * Barbell: empty bar, then ~50%, ~70% and (for heavy work) ~85%. Dumbbells and machines: ~50% and ~75%.
  */
-export function warmupSets(work: number, kind: Kind, step: number): WarmupSet[] {
+export function warmupSets(work: number, kind: Kind, step: number, age?: AgeGroup): WarmupSet[] {
   if (work <= 0 || kind === 'corporal') return []
+  const rules = ageRules(age)
   const out: WarmupSet[] = []
   const push = (weight: number, reps: number) => {
     if (weight <= 0 || weight >= work) return
@@ -263,10 +286,14 @@ export function warmupSets(work: number, kind: Kind, step: number): WarmupSet[] 
     push(BAR_KG, 10)
     push(roundDown(work * 0.5, step), 5)
     push(roundDown(work * 0.7, step), 3)
-    if (work >= 80) push(roundDown(work * 0.85, step), 1)
+    if (work >= 80) {
+      if (rules.heavySingles) push(roundDown(work * 0.85, step), 1)
+      else push(roundDown(work * 0.8, step), 2)
+    }
     return out
   }
   if (work < 10) return []
+  if (rules.extraWarmup && work >= 20) push(roundDown(work * 0.3, step), 12)
   push(roundDown(work * 0.5, step), 8)
   push(roundDown(work * 0.75, step), 4)
   return out

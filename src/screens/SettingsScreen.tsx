@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { PlanEditor } from '../components/PlanEditor'
+import { AGE_GROUPS, AGE_LABELS, ageSummary } from '../engine/age'
 import type { Plan, Profile, Settings } from '../engine/types'
 import { kg } from '../format'
 import { actions, exportData, type AppState } from '../store'
@@ -95,6 +96,24 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
       </section>
 
       <section className="section">
+        <h2 className="h2">Tu edad</h2>
+        <p className="lede small">
+          Ajusta los saltos de peso, cuándo subir, el calentamiento y el regreso tras una pausa desde tu próxima sesión.
+        </p>
+        <div className="chips" role="group" aria-label="Edad" style={{ marginTop: 12 }}>
+          {AGE_GROUPS.map((g) => (
+            <button key={g} aria-pressed={profile.age === g} onClick={() => actions.updateProfile({ age: g })}>
+              {AGE_LABELS[g]}
+            </button>
+          ))}
+        </div>
+        {ageSummary(profile.age) && <div className="note ai">{ageSummary(profile.age)}</div>}
+        {profile.age && !plan.custom && (
+          <p className="small muted">Para adaptar también las series y los descansos de tu rutina, rehaz la encuesta.</p>
+        )}
+      </section>
+
+      <section className="section">
         <h2 className="h2">Durante el entrenamiento</h2>
         <div className="row">
           <div>
@@ -186,7 +205,7 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
       </section>
 
       <p className="small muted" style={{ marginTop: 32, textAlign: 'center' }}>
-        gAInlab versión 0.3
+        gAInlab versión 0.4
       </p>
     </>
   )

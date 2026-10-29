@@ -1,3 +1,4 @@
+export type AgeGroup = 'menor' | '18-29' | '30-39' | '40-49' | '50-59' | '60-69' | '70+'
 export type Goal = 'hipertrofia' | 'grasa' | 'fuerza' | 'salud'
 export type Experience = 'nuevo' | 'menos1' | 'mas1'
 export type Situation = 'entreno' | 'regreso' | 'cero'
@@ -36,6 +37,8 @@ export type Muscle =
 
 export interface Profile {
   goal: Goal
+  /** Optional for profiles created before the age question existed. */
+  age?: AgeGroup
   experience: Experience
   situation: Situation
   days: number

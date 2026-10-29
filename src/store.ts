@@ -108,6 +108,12 @@ export const actions = {
     set({ ...state, plan })
   },
 
+  /** Updates profile answers that don't rebuild the plan (e.g. age). */
+  updateProfile(patch: Partial<Profile>) {
+    if (!state.profile) return
+    set({ ...state, profile: { ...state.profile, ...patch } })
+  },
+
   /** Creates an exercise that is not in the library and returns its id. */
   createExercise(name: string, kind: Kind, muscle: Muscle, compound: boolean): string {
     const id = `custom-${uid()}`
@@ -244,7 +250,7 @@ export const actions = {
 
 function prepareExercise(plan: PlanExercise, exerciseId: string): ActiveExercise {
   const target = { ...plan, exerciseId }
-  const prescription = prescribe(target, historyFor(exerciseId, state.sessions), state.settings)
+  const prescription = prescribe(target, historyFor(exerciseId, state.sessions), state.settings, new Date(), state.profile?.age)
   // In calibration the reps start empty so the user logs what they actually did.
   const calibrating = prescription.mode === 'calibracion'
   const sets: SetLog[] = prescription.reps.map((reps) => ({
