@@ -14,23 +14,26 @@ const profile: Profile = {
   createdAt: '2026-10-28T00:00:00Z',
 }
 const plan = buildPlan(profile)
-// Full body A: sentadilla-barra, banca-barra, remo-barra, elevaciones-laterales, curl-mancuernas
+// Positions come from the generated plan, so the tests survive changes to the templates.
+const press = plan.days[0].exercises.findIndex((e) => e.slot === 'pressHorizontal')
+const squat = plan.days[0].exercises.findIndex((e) => e.slot === 'sentadilla')
+const pressId = plan.days[0].exercises[press].exerciseId
 
 describe('checkSwap', () => {
   it('accepts an equivalent movement without warnings', () => {
-    const r = checkSwap(plan, 'd1', 1, 'press-pecho-maquina', [])
+    const r = checkSwap(plan, 'd1', press, pressId === 'press-pecho-maquina' ? 'banca-mancuernas' : 'press-pecho-maquina', [])
     expect(r.level).toBe('igual')
     expect(r.warnings).toHaveLength(0)
   })
 
   it('flags a similar zone with a different pattern', () => {
-    const r = checkSwap(plan, 'd1', 1, 'aperturas-maquina', [])
+    const r = checkSwap(plan, 'd1', press, 'aperturas-maquina', [])
     expect(r.level).toBe('parecido')
     expect(r.warnings.join(' ')).toMatch(/aislamiento/)
   })
 
   it('warns when the zone is different', () => {
-    const r = checkSwap(plan, 'd1', 0, 'curl-barra', [])
+    const r = checkSwap(plan, 'd1', squat, 'curl-barra', [])
     expect(r.level).toBe('distinto')
     expect(r.title).toMatch(/No trabaja la misma zona/)
   })
@@ -58,12 +61,12 @@ describe('checkSwap', () => {
   })
 
   it('blocks duplicates in the same day', () => {
-    const r = checkSwap(plan, 'd1', 0, 'banca-barra', [])
+    const r = checkSwap(plan, 'd1', squat, pressId, [])
     expect(r.level).toBe('bloqueado')
   })
 
   it('warns about injuries', () => {
-    const r = checkSwap(plan, 'd1', 1, 'aperturas-mancuernas', ['hombro'])
+    const r = checkSwap(plan, 'd1', press, 'aperturas-mancuernas', ['hombro'])
     expect(r.warnings.some((w) => w.includes('hombro'))).toBe(true)
   })
 })
@@ -76,5 +79,34 @@ describe('checkRemoval', () => {
     expect(lateral).toBeGreaterThanOrEqual(0)
     // Shoulders are still trained by the overhead press, so no warning.
     expect(checkRemoval(p, torsoA.id, lateral)).toHaveLength(0)
+  })
+
+  it('flags the last exercise of a day with a stable code', () => {
+    const one: Plan = {
+      name: 'Prueba',
+      summary: '',
+      days: [
+        {
+          id: 'd1',
+          name: 'Día 1',
+          focus: '',
+          exercises: [{ exerciseId: 'gemelo-maquina', slot: 'gemelo', role: 'accesorio', sets: 3, repMin: 10, repMax: 15, rest: 60 }],
+        },
+      ],
+    }
+    expect(checkRemoval(one, 'd1', 0).map((w) => w.code)).toEqual(['ultimo-del-dia', 'musculos-sin-trabajo'])
+  })
+})
+
+describe('unknown exercises', () => {
+  it('can be replaced instead of crashing', () => {
+    const broken: Plan = {
+      ...plan,
+      days: plan.days.map((d, i) => (i === 0 ? { ...d, exercises: d.exercises.map((e, j) => (j === press ? { ...e, exerciseId: 'ya-no-existe' } : e)) } : d)),
+    }
+    const r = checkSwap(broken, 'd1', press, 'press-pecho-maquina', [])
+    expect(r.level).toBe('distinto')
+    expect(r.title).toMatch(/ya no está en la biblioteca/)
+    expect(() => checkRemoval(broken, 'd1', press)).not.toThrow()
   })
 })

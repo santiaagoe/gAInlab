@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { allExercises, getExercise, registerCustomExercises } from './exercises'
 import { buildPlan } from './plan'
 import {
@@ -28,12 +28,15 @@ const profile: Profile = {
   createdAt: '2026-10-28T00:00:00Z',
 }
 
+afterEach(() => registerCustomExercises([]))
+
 describe('plan edits', () => {
   const plan = buildPlan(profile)
+  const press = plan.days[0].exercises.findIndex((e) => e.slot === 'pressHorizontal')
 
   it('replaces and updates without touching other days', () => {
-    const p = updateExercise(replaceExercise(plan, 'd1', 1, 'press-pecho-maquina'), 'd1', 1, { sets: 4 })
-    expect(p.days[0].exercises[1]).toMatchObject({ exerciseId: 'press-pecho-maquina', sets: 4, slot: 'pressHorizontal' })
+    const p = updateExercise(replaceExercise(plan, 'd1', press, 'press-pecho-maquina'), 'd1', press, { sets: 4 })
+    expect(p.days[0].exercises[press]).toMatchObject({ exerciseId: 'press-pecho-maquina', sets: 4, slot: 'pressHorizontal' })
     expect(p.days[1]).toBe(plan.days[1])
     expect(p.edited).toBe(true)
     expect(plan.edited).toBeUndefined()
@@ -77,9 +80,17 @@ describe('custom exercises', () => {
     expect(getExercise('custom-1').name).toBe('Press Hammer')
     expect(allExercises()[0].id).toBe('custom-1')
     const plan = buildPlan(profile)
-    const check = checkSwap(plan, 'd1', 1, 'custom-1', [])
+    const press = plan.days[0].exercises.findIndex((e) => e.slot === 'pressHorizontal')
+    const check = checkSwap(plan, 'd1', press, 'custom-1', [])
     expect(check.level).toBe('parecido')
     registerCustomExercises([])
     expect(allExercises().some((e) => e.id === 'custom-1')).toBe(false)
+  })
+
+  it('ignores broken entries without losing the valid ones', () => {
+    registerCustomExercises([{ id: 'custom-ok', name: 'Bien', kind: 'maquina', muscle: 'pecho', compound: false }])
+    registerCustomExercises([null, { id: 'custom-2', name: 'Otro', kind: 'mancuerna', muscle: 'biceps', compound: false }])
+    expect(getExercise('custom-2').name).toBe('Otro')
+    expect(getExercise('custom-ok').unknown).toBe(true)
   })
 })

@@ -4,8 +4,9 @@ import { Onboarding } from './screens/Onboarding'
 import { SessionScreen } from './screens/Session'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { Today } from './screens/Today'
+import { StatusBanner } from './components/StatusBanner'
 import type { Session } from './engine/types'
-import { getState, useApp } from './store'
+import { useApp } from './store'
 
 const Progress = lazy(() => import('./screens/Progress').then((m) => ({ default: m.Progress })))
 
@@ -24,6 +25,7 @@ export default function App() {
   if (!profile || !plan || redo) {
     return (
       <main className="app no-nav">
+        <StatusBanner />
         <Onboarding
           initial={redo ? profile : undefined}
           onCancel={redo ? () => setRedo(false) : undefined}
@@ -37,15 +39,15 @@ export default function App() {
   if (active) {
     return (
       <main className="app no-nav">
+        <StatusBanner />
         <SessionScreen
           active={active}
           plan={plan}
           profile={profile}
           settings={settings}
           notes={notes}
-          onFinished={() => {
-            const all = getState().sessions
-            setJustFinished(all[all.length - 1] ?? null)
+          onFinished={(session) => {
+            setJustFinished(session)
             setTab('hoy')
           }}
         />
@@ -56,6 +58,7 @@ export default function App() {
   return (
     <>
       <main className="app">
+        <StatusBanner />
         {tab === 'hoy' && (
           <Today
             plan={plan}

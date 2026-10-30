@@ -4,8 +4,8 @@ import { IconCheck, IconFocus, IconList, IconNext, IconPrev, IconSwap } from '..
 import { NumField } from '../components/NumField'
 import { getExercise } from '../engine/exercises'
 import { incrementFor, warmupSets } from '../engine/progression'
-import type { AgeGroup, Feel, Plan, Profile, SetLog, Settings } from '../engine/types'
-import { kg, relativeDay, setsText, toneFor } from '../format'
+import type { AgeGroup, Plan, Profile, Session, SetLog, Settings } from '../engine/types'
+import { clock, FEEL_OPTIONS, kg, relativeDay, setsText, toneFor } from '../format'
 import { actions, type ActiveExercise, type ActiveSession } from '../store'
 
 interface Rest {
@@ -20,7 +20,8 @@ interface Props {
   profile: Profile
   settings: Settings
   notes: Record<string, string>
-  onFinished: () => void
+  /** Receives the saved session, or null when nothing was saved. */
+  onFinished: (session: Session | null) => void
 }
 
 export function SessionScreen({ active, plan, profile, settings, notes, onFinished }: Props) {
@@ -41,8 +42,7 @@ export function SessionScreen({ active, plan, profile, settings, notes, onFinish
 
   const finish = () => {
     if (totals.done === totals.all) {
-      actions.finishSession()
-      onFinished()
+      onFinished(actions.finishSession())
     } else {
       setConfirm(true)
     }
@@ -168,10 +168,7 @@ export function SessionScreen({ active, plan, profile, settings, notes, onFinish
               {totals.done > 0 && (
                 <button
                   className="btn btn-primary"
-                  onClick={() => {
-                    actions.finishSession()
-                    onFinished()
-                  }}
+                  onClick={() => onFinished(actions.finishSession())}
                 >
                   Guardar y terminar
                 </button>
@@ -325,11 +322,12 @@ function ExerciseBlock({
 
   const changeWeight = (setIndex: number, weight: number) => {
     const old = ex.sets[setIndex].weight
-    actions.updateSet(index, setIndex, { weight })
-    // Carry the new weight to the following sets that still had the old one.
-    ex.sets.forEach((s, j) => {
-      if (j > setIndex && !s.done && s.weight === old) actions.updateSet(index, j, { weight })
-    })
+    // Carry the new weight to the following sets that still had the old one, in a single save.
+    const changes = ex.sets
+      .map((s, j) => ({ s, j }))
+      .filter(({ s, j }) => j === setIndex || (j > setIndex && !s.done && s.weight === old))
+      .map(({ j }) => ({ index: j, patch: { weight } }))
+    actions.updateSets(index, changes)
     if (invalid === setIndex) setInvalid(null)
   }
 
@@ -433,13 +431,7 @@ function ExerciseBlock({
         <div className="feel">
           <p>¿Cómo se sintió?</p>
           <div className="feel-opts">
-            {(
-              [
-                ['facil', 'Fácil', 'Sobraban 3+'],
-                ['justo', 'Justo', 'Sobraban 1–2'],
-                ['limite', 'Al límite', 'Ni una más'],
-              ] as [Feel, string, string][]
-            ).map(([value, label, hint]) => (
+            {FEEL_OPTIONS.map(({ value, label, hint }) => (
               <button key={value} aria-pressed={ex.feel === value} onClick={() => actions.setFeel(index, value)}>
                 {label}
                 <small>{hint}</small>
@@ -530,7 +522,7 @@ function RestTimer({ rest, raised, onAdd, onClose }: { rest: Rest; raised: boole
   }, [over])
 
   const shown = Math.abs(left)
-  const time = `${over ? '+' : ''}${Math.floor(shown / 60)}:${String(shown % 60).padStart(2, '0')}`
+  const time = `${over ? '+' : ''}${clock(shown)}`
   const ratio = Math.max(0, Math.min(1, left / rest.total))
 
   return (

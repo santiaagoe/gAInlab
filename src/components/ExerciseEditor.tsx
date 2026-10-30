@@ -3,8 +3,9 @@ import { getExercise, listMuscles, musclesOf } from '../engine/exercises'
 import type { ExercisePatch } from '../engine/planEdit'
 import { checkRemoval } from '../engine/swap'
 import type { Plan } from '../engine/types'
+import { clock } from '../engine/units'
 import { actions } from '../store'
-import { Sheet } from './ExercisePicker'
+import { Sheet } from './Sheet'
 
 const RANGES: [number, number][] = [
   [4, 6],
@@ -57,7 +58,10 @@ export function ExerciseEditor({ plan, dayId, index, note, onUpdate, onMove, onR
   }
 
   if (removing) {
-    const warnings = checkRemoval(plan, dayId, index).filter((w) => !w.startsWith('Es el único'))
+    // The "last exercise of the day" case has its own message below.
+    const warnings = checkRemoval(plan, dayId, index)
+      .filter((w) => w.code !== 'ultimo-del-dia')
+      .map((w) => w.text)
     return (
       <Sheet onClose={() => setRemoving(false)}>
         <h2>
@@ -138,7 +142,7 @@ export function ExerciseEditor({ plan, dayId, index, note, onUpdate, onMove, onR
         <div className="chips" role="group" aria-label="Descanso entre series">
           {RESTS.map((r) => (
             <button key={r} aria-pressed={entry.rest === r} onClick={() => onUpdate({ rest: r })}>
-              {Math.floor(r / 60)}:{String(r % 60).padStart(2, '0')}
+              {clock(r)}
             </button>
           ))}
         </div>

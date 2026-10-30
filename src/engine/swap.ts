@@ -42,7 +42,10 @@ export function checkSwap(plan: Plan, dayId: string, index: number, nextId: stri
 
   let level: SwapLevel
   let title: string
-  if (next.slot === current.slot) {
+  if (current.unknown) {
+    level = 'distinto'
+    title = `Reemplazas un ejercicio que ya no está en la biblioteca. ${next.name} trabaja ${listMuscles(after)}.`
+  } else if (next.slot === current.slot) {
     level = 'igual'
     title = `Trabaja la misma zona (${listMuscles([before[0]])}) con un movimiento equivalente.`
   } else if (shared.includes(before[0]) || shared.includes(after[0])) {
@@ -83,13 +86,21 @@ export function checkSwap(plan: Plan, dayId: string, index: number, nextId: stri
   return { level, title, warnings }
 }
 
+export type RemovalWarningCode = 'ultimo-del-dia' | 'musculos-sin-trabajo'
+
+export interface RemovalWarning {
+  /** Stable identifier for the UI; the text may change. */
+  code: RemovalWarningCode
+  text: string
+}
+
 /** Muscles that would lose all weekly work if the exercise at that position were removed. */
-export function checkRemoval(plan: Plan, dayId: string, index: number): string[] {
+export function checkRemoval(plan: Plan, dayId: string, index: number): RemovalWarning[] {
   const day = plan.days.find((d) => d.id === dayId)
   const target = day?.exercises[index]
   if (!day || !target) return []
-  const warnings: string[] = []
-  if (day.exercises.length === 1) warnings.push(`Es el único ejercicio de ${day.name}.`)
+  const warnings: RemovalWarning[] = []
+  if (day.exercises.length === 1) warnings.push({ code: 'ultimo-del-dia', text: `Es el único ejercicio de ${day.name}.` })
   const remaining = new Set<Muscle>()
   plan.days.forEach((d) =>
     d.exercises.forEach((e, i) => {
@@ -98,6 +109,8 @@ export function checkRemoval(plan: Plan, dayId: string, index: number): string[]
     }),
   )
   const lost = musclesOf(getExercise(target.exerciseId)).slice(0, 2).filter((m) => !remaining.has(m))
-  if (lost.length > 0) warnings.push(`Tu rutina quedaría sin ejercicios para ${listMuscles(lost)} en toda la semana.`)
+  if (lost.length > 0) {
+    warnings.push({ code: 'musculos-sin-trabajo', text: `Tu rutina quedaría sin ejercicios para ${listMuscles(lost)} en toda la semana.` })
+  }
   return warnings
 }

@@ -1,13 +1,12 @@
 import { ageRules } from './age'
 import { findExercise } from './exercises'
+import { calendarDaysBetween, formatKg } from './units'
 import type { AgeGroup, ExerciseLog, Feel, Kind, PlanExercise, Prescription, Session, Settings } from './types'
 
 export interface HistoryEntry {
   date: string
   log: ExerciseLog
 }
-
-const DAY_MS = 86_400_000
 
 /** Reps "left in the tank" implied by each feel button, used to refine the strength estimate. */
 const RESERVE: Record<Feel, number> = { facil: 3, justo: 1.5, limite: 0 }
@@ -80,23 +79,57 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v))
 }
 
-function formatKg(kg: number): string {
-  return `${kg.toLocaleString('es-CL', { maximumFractionDigits: 2 })} kg`
+interface Dose {
+  min: number
+  max: number
+  /** Sets completed in that session. */
+  sets: number
 }
 
-function belowRange(summary: WorkSummary, plan: PlanExercise): boolean {
-  const below = Array.from({ length: plan.sets }, (_, i) => summary.reps[i] ?? 0).filter(
-    (r) => r < plan.repMin,
-  ).length
-  return below * 2 > plan.sets
+/**
+ * Rep range a logged session was done with. The same exercise can appear on two days with different doses
+ * (for example 4×4–6 and 3×6–8), so each session is judged against its own range, not today's.
+ */
+function doseOf(log: ExerciseLog, plan: PlanExercise): Dose {
+  const ok = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 1
+  const min = ok(log.repMin) ? log.repMin : plan.repMin
+  const max = ok(log.repMax) && log.repMax >= min ? log.repMax : Math.max(min, plan.repMax)
+  return { min, max, sets: log.sets.filter((s) => s.done && s.reps > 0).length }
 }
 
+/** Sets that must be at the top of the range: today's sets, or fewer if that session had fewer. */
+function setsToCheck(plan: PlanExercise, dose: Dose): number {
+  return Math.max(1, Math.min(plan.sets, dose.sets))
+}
+
+function atTop(summary: WorkSummary, plan: PlanExercise, dose: Dose): boolean {
+  const n = setsToCheck(plan, dose)
+  return summary.reps.length >= n && summary.reps.slice(0, n).every((r) => r >= dose.max)
+}
+
+/** Most of the sets done at the working weight fell short of the range. Missing sets are not counted as failures. */
+function belowRange(summary: WorkSummary, dose: Dose): boolean {
+  if (summary.reps.length === 0) return false
+  return summary.reps.filter((r) => r < dose.min).length * 2 > summary.reps.length
+}
+
+function pauseText(days: number): string {
+  if (days < 14) return `Llevas ${days} días sin entrenar`
+  return `Llevas ${Math.floor(days / 7)} semanas sin entrenar`
+}
+
+/**
+ * Next session for one exercise.
+ * @param lastTrainedAt date of the user's last session of any exercise; a break is measured from it, so
+ *   training fewer days than planned does not trigger return mode on every rotation.
+ */
 export function prescribe(
   plan: PlanExercise,
   history: HistoryEntry[],
   settings: Settings,
   now: Date = new Date(),
   age?: AgeGroup,
+  lastTrainedAt?: string,
 ): Prescription {
   const rules = ageRules(age)
   const exercise = findExercise(plan.exerciseId)
@@ -120,29 +153,42 @@ export function prescribe(
 
   const last = history[history.length - 1]
   const summary = workSummary(last.log)
+  const dose = doseOf(last.log, plan)
   const w = summary.weight
   const feel = last.log.feel
   const base = { last }
-  const gapDays = Math.floor((now.getTime() - new Date(last.date).getTime()) / DAY_MS)
 
-  // Modo regreso: long gap since this exercise was last trained.
+  // A break is time without training at all, not time since this particular exercise.
+  const lastDate = new Date(last.date)
+  const anyDate = lastTrainedAt ? new Date(lastTrainedAt) : lastDate
+  const since = Number.isNaN(anyDate.getTime()) || anyDate < lastDate ? lastDate : anyDate
+  const gapDays = calendarDaysBetween(since, now)
+
+  // Weight from before a break that the user is still climbing back to.
+  const pending = last.log.recoverTo
+  const recoverTo = typeof pending === 'number' && pending > w ? pending : undefined
+  const keepRecovery = (p: Prescription): Prescription =>
+    recoverTo !== undefined && p.weight !== null && p.weight > 0 && p.weight < recoverTo ? { ...p, recoverTo } : p
+
+  // Modo regreso: long break without training.
   if (gapDays >= rules.returnAfterDays && w > 0) {
     const factor = (gapDays >= 56 ? 0.7 : gapDays >= 28 ? 0.8 : 0.9) - rules.returnExtra
-    const weight = Math.max(step, roundDown(w * factor, step))
-    const weeks = Math.floor(gapDays / 7)
+    const weight = Math.min(w, Math.max(step, roundDown(w * factor, step)))
+    const target = Math.max(w, recoverTo ?? 0)
     return {
       ...base,
       mode: 'regreso',
       weight,
       reps: fill(sets, repMin),
       delta: weight - w,
-      note: `Llevas ${weeks} semanas sin este ejercicio: bajamos un ${Math.round((1 - factor) * 100)}% para retomar sin riesgo. Recuperarás el peso en pocas sesiones.`,
+      note: `${pauseText(gapDays)}: bajamos un ${Math.round((1 - factor) * 100)}% para retomar sin riesgo. Si las próximas sesiones salen bien, subimos más rápido hasta volver a ${formatKg(target)}.`,
+      ...(target > weight ? { recoverTo: target } : {}),
     }
   }
 
   // Bodyweight with no extra load: progress by reps.
   if (w === 0) {
-    const allTop = summary.reps.length >= sets && summary.reps.every((r) => r >= repMax)
+    const allTop = atTop(summary, plan, dose)
     const reps = Array.from({ length: sets }, (_, i) =>
       clamp((summary.reps[i] ?? summary.reps[summary.reps.length - 1] ?? repMin) + (feel === 'limite' ? 0 : 1), 1, repMax),
     )
@@ -158,54 +204,73 @@ export function prescribe(
     }
   }
 
-  // Calibration correction: reps landed far outside the range, so re-aim with the strength estimate.
+  // Calibration correction: only right after calibrating or a break, when the weight was still a guess.
+  // In a normal session a bad day is handled by "repetir" and "bajar".
+  const calibrating = history.length === 1 || recoverTo !== undefined
   const top = Math.max(...summary.reps)
   const avg = summary.reps.reduce((a, b) => a + b, 0) / summary.reps.length
-  if (avg > repMax + 2 || avg < repMin - 2) {
+  const tooLight = avg > dose.max + 2
+  const tooHeavy = avg < dose.min - 2
+  if (calibrating && (tooLight || tooHeavy)) {
     const reserve = feel ? RESERVE[feel] : 1
     const e1 = epley(w, summary.reps[0] + reserve)
-    const targetReps = repMin + 1
+    const targetReps = Math.min(repMin + 1, repMax)
     let weight = roundTo(weightForReps(e1, targetReps + 1), step)
-    if (avg > repMax + 2) weight = Math.max(weight, w + step)
-    if (avg < repMin - 2) weight = Math.min(weight, roundDown(w - step, step))
-    weight = Math.max(step, weight)
-    return {
+    if (tooLight) weight = Math.max(weight, w + step)
+    if (tooHeavy) weight = Math.min(w, Math.max(step, Math.min(weight, roundDown(w - step, step))))
+    weight = Math.max(Math.min(step, w), weight)
+    return keepRecovery({
       ...base,
       mode: 'ajuste',
       weight,
       reps: fill(sets, targetReps),
       delta: weight - w,
-      note:
-        avg > repMax + 2
-          ? `Hiciste ${top} repeticiones: el peso era liviano. Con ${formatKg(weight)} deberías quedar dentro del rango.`
-          : `Quedaste lejos del rango. Con ${formatKg(weight)} deberías llegar a unas ${targetReps} repeticiones.`,
-    }
+      note: tooLight
+        ? `Hiciste ${top} repeticiones: el peso era liviano. Con ${formatKg(weight)} deberías quedar dentro del rango.`
+        : `Quedaste lejos del rango. Con ${formatKg(weight)} deberías llegar a unas ${targetReps} repeticiones.`,
+    })
   }
 
-  const allTop = summary.reps.length >= sets && summary.reps.slice(0, sets).every((r) => r >= repMax)
+  const below = belowRange(summary, dose)
+  const complete = summary.reps.length >= setsToCheck(plan, dose)
+
+  // Coming back from a break: every completed session inside the range climbs faster, up to the old weight.
+  if (recoverTo !== undefined && !below && complete && feel !== 'limite') {
+    const weight = Math.min(recoverTo, Math.max(roundTo(w + step, step), roundDown(w + (recoverTo - w) / 2, step)))
+    return keepRecovery({
+      ...base,
+      mode: 'subir',
+      weight,
+      reps: fill(sets, repMin),
+      delta: weight - w,
+      note:
+        weight >= recoverTo
+          ? `Vuelves a ${formatKg(weight)}, tu peso de antes de la pausa.`
+          : `Vas recuperando tu peso de antes de la pausa: hoy ${formatKg(weight)}, la meta es ${formatKg(recoverTo)}.`,
+    })
+  }
+
+  const allTop = atTop(summary, plan, dose)
   // Hold once at the top when it was a max effort; if the previous session already held this weight, go up.
   const prevEntry = history.length >= 2 ? history[history.length - 2] : undefined
-  const prevAtTop = prevEntry
-    ? (() => {
-        const ps = workSummary(prevEntry.log)
-        return ps.weight === w && ps.reps.length >= sets && ps.reps.slice(0, sets).every((r) => r >= repMax)
-      })()
-    : false
+  const prevSummary = prevEntry ? workSummary(prevEntry.log) : undefined
+  const prevDose = prevEntry ? doseOf(prevEntry.log, plan) : undefined
+  const prevAtTop = prevSummary && prevDose ? prevSummary.weight === w && atTop(prevSummary, plan, prevDose) : false
   if (allTop && feel === 'limite' && rules.consolidateAtLimit && !prevAtTop) {
-    return {
+    return keepRecovery({
       ...base,
       mode: 'mantener',
       weight: w,
       reps: fill(sets, repMax),
       delta: 0,
-      note: `Llegaste a ${repMax} repeticiones, pero al límite: repite ${formatKg(w)} una sesión más y, si sale con algo de margen, subimos.`,
-    }
+      note: `Llegaste a ${dose.max} repeticiones, pero al límite: repite ${formatKg(w)} una sesión más y, si sale con algo de margen, subimos.`,
+    })
   }
 
   if (allTop) {
     const jump = feel === 'facil' && compound && rules.doubleJump ? step * 2 : step
     const weight = roundTo(w + jump, step)
-    return {
+    return keepRecovery({
       ...base,
       mode: 'subir',
       weight,
@@ -213,17 +278,15 @@ export function prescribe(
       delta: weight - w,
       note:
         jump > step
-          ? `Completaste ${repMax} en todas las series y te sobró margen: subimos ${formatKg(jump)}.`
-          : `Completaste ${repMax} en todas las series: subimos ${formatKg(jump)} y vuelves a ${repMin} repeticiones.`,
-    }
+          ? `Completaste ${dose.max} en todas las series y te sobró margen: subimos ${formatKg(jump)}.`
+          : `Completaste ${dose.max} en todas las series: subimos ${formatKg(jump)} y vuelves a ${repMin} repeticiones.`,
+    })
   }
 
-  if (belowRange(summary, plan)) {
-    const prev = history.length >= 2 ? history[history.length - 2] : undefined
-    const prevSummary = prev ? workSummary(prev.log) : undefined
-    const failedTwice = prevSummary && prevSummary.weight === w && belowRange(prevSummary, plan)
+  if (below) {
+    const failedTwice = prevSummary && prevDose && prevSummary.weight === w && belowRange(prevSummary, prevDose)
     if (failedTwice) {
-      const weight = Math.max(step, roundDown(w * 0.9, step))
+      const weight = Math.min(w, Math.max(step, roundDown(w * 0.9, step)))
       return {
         ...base,
         mode: 'bajar',
@@ -233,31 +296,32 @@ export function prescribe(
         note: 'Dos sesiones bajo el rango: bajamos un 10% para volver a progresar con buena técnica.',
       }
     }
-    return {
+    return keepRecovery({
       ...base,
       mode: 'repetir',
       weight: w,
       reps: fill(sets, repMin),
       delta: 0,
       note: `Quedaste bajo el rango: repite ${formatKg(w)} y apunta a ${repMin} repeticiones en cada serie.`,
-    }
+    })
   }
 
   const reps = Array.from({ length: sets }, (_, i) => {
     const prior = summary.reps[i] ?? summary.reps[summary.reps.length - 1] ?? repMin
     return clamp(prior + (feel === 'limite' ? 0 : 1), repMin, repMax)
   })
-  return {
+  return keepRecovery({
     ...base,
     mode: 'mantener',
     weight: w,
     reps,
     delta: 0,
-    note:
-      feel === 'limite'
+    note: !complete
+      ? `Esta vez haz las ${sets} series con ${formatKg(w)}.`
+      : feel === 'limite'
         ? 'Lo hiciste al límite: mismo peso y consolida las mismas repeticiones.'
         : 'Mismo peso: suma una repetición por serie.',
-  }
+  })
 }
 
 export interface WarmupSet {

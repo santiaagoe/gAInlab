@@ -13,6 +13,7 @@ import { entryFor } from '../engine/plan'
 import { checkSwap, type SwapLevel } from '../engine/swap'
 import type { Exercise, Kind, Muscle, Plan, Profile, Slot } from '../engine/types'
 import { actions } from '../store'
+import { Sheet } from './Sheet'
 
 interface Props {
   plan: Plan
@@ -363,16 +364,6 @@ function PickItem({
         {risky && !taken && <span className="pick-warn"> Puede molestar tu lesión</span>}
       </span>
     </button>
-  )
-}
-
-export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>
   )
 }
 

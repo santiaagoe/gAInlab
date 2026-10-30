@@ -133,6 +133,7 @@ export function isAvoided(exercise: Exercise, injuries: Injury[]): Injury[] {
 }
 
 const BY_ID = new Map(EXERCISES.map((e) => [e.id, e]))
+const LIBRARY_IDS = new Set(EXERCISES.map((e) => e.id))
 let CUSTOM: Exercise[] = []
 
 /** Slot used for a user-made exercise, from the muscle it mainly trains. */
@@ -161,10 +162,29 @@ export function fromCustom(c: CustomExercise): Exercise {
   }
 }
 
-/** Makes the user's own exercises available everywhere the library is used. */
-export function registerCustomExercises(list: CustomExercise[]) {
+function isCustomExercise(c: unknown): c is CustomExercise {
+  if (!c || typeof c !== 'object') return false
+  const x = c as Record<string, unknown>
+  return (
+    typeof x.id === 'string' &&
+    typeof x.name === 'string' &&
+    typeof x.compound === 'boolean' &&
+    typeof x.kind === 'string' &&
+    ['barra', 'mancuerna', 'maquina', 'corporal'].includes(x.kind) &&
+    typeof x.muscle === 'string' &&
+    x.muscle in SLOT_FOR_MUSCLE &&
+    !LIBRARY_IDS.has(x.id)
+  )
+}
+
+/**
+ * Makes the user's own exercises available everywhere the library is used.
+ * The new list is built first and swapped in at the end, so a bad entry never leaves the registry half-updated.
+ */
+export function registerCustomExercises(list: readonly unknown[]) {
+  const next = (Array.isArray(list) ? list : []).filter(isCustomExercise).map(fromCustom)
   CUSTOM.forEach((e) => BY_ID.delete(e.id))
-  CUSTOM = list.map(fromCustom)
+  CUSTOM = next
   CUSTOM.forEach((e) => BY_ID.set(e.id, e))
 }
 
@@ -173,10 +193,30 @@ export function allExercises(): Exercise[] {
   return [...CUSTOM, ...EXERCISES]
 }
 
+/** True for exercises in the built-in library (not the user's own). */
+export function isLibraryExercise(id: string): boolean {
+  return LIBRARY_IDS.has(id)
+}
+
+/**
+ * Exercise by id. An id that is not in the library (an old backup, a renamed exercise) returns a placeholder
+ * instead of throwing, so the app keeps working and the user can replace it from the plan.
+ */
 export function getExercise(id: string): Exercise {
-  const ex = BY_ID.get(id)
-  if (!ex) throw new Error(`Ejercicio desconocido: ${id}`)
-  return ex
+  return BY_ID.get(id) ?? unknownExercise(id)
+}
+
+export function unknownExercise(id: string): Exercise {
+  return {
+    id,
+    name: 'Ejercicio no encontrado',
+    slot: 'pecho',
+    kind: 'maquina',
+    equip: ['gimnasio', 'basico', 'casa'],
+    compound: false,
+    muscles: [],
+    unknown: true,
+  }
 }
 
 export function findExercise(id: string): Exercise | undefined {

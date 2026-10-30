@@ -574,6 +574,27 @@ h3 {
   opacity: 0.7;
 }
 
+.banner.warn {
+  background: var(--down-soft);
+  color: var(--down);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.banner.warn .banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.banner.warn .banner-actions button {
+  opacity: 1;
+  font-weight: 650;
+  text-decoration: underline;
+  min-height: 44px;
+}
+
 .history-item {
   display: flex;
   justify-content: space-between;

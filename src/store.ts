@@ -2,101 +2,130 @@ import { useSyncExternalStore } from 'react'
 import { getExercise, registerCustomExercises } from './engine/exercises'
 import { buildPlan } from './engine/plan'
 import { replaceExercise } from './engine/planEdit'
-import { historyFor, prescribe } from './engine/progression'
-import type { CustomExercise, Feel, Kind, Muscle, Plan, PlanDay, PlanExercise, Prescription, Profile, Session, SetLog, Settings } from './engine/types'
+import { cleanEdited, prepareExercise, toSession, type TrainingContext } from './engine/session'
+import type { CustomExercise, Feel, Kind, Muscle, Plan, PlanDay, Profile, Session, SetLog, Settings } from './engine/types'
+import { CORRUPT_KEY, initialState, parseState, PREVIOUS_KEY, STORAGE_KEY, type AppState } from './persistence'
 
-export interface ActiveExercise {
-  plan: PlanExercise
-  exerciseId: string
-  prescription: Prescription
-  sets: SetLog[]
-  feel?: Feel
+export type { ActiveExercise, ActiveSession } from './engine/types'
+export type { AppState } from './persistence'
+export { nextDay } from './engine/session'
+
+/** Problems the user should know about. Not saved. */
+export interface StoreStatus {
+  /** The last change could not be saved on this device (storage full or blocked). */
+  persistError: boolean
+  /** Saved data could not be read in full when the app opened; the original was kept in CORRUPT_KEY. */
+  loadIssue: 'corrupt' | 'partial' | null
 }
 
-export interface ActiveSession {
-  id: string
-  startedAt: string
-  dayId: string
-  dayName: string
-  exercises: ActiveExercise[]
-  /** Exercise shown in focus mode. */
-  current?: number
-}
+/* ---------- Storage access that never throws ---------- */
 
-export interface AppState {
-  version: 1
-  profile?: Profile
-  plan?: Plan
-  sessions: Session[]
-  settings: Settings
-  active?: ActiveSession
-  /** Personal notes per exercise (seat height, technique cues...). */
-  notes: Record<string, string>
-  /** Exercises the user created because they were not in the library. */
-  customExercises: CustomExercise[]
-}
-
-const KEY = 'gainlab:v1'
-
-const DEFAULT_SETTINGS: Settings = { incBarra: 2.5, incMancuerna: 2, incMaquina: 2.5, sessionView: 'enfoque' }
-
-function initial(): AppState {
-  return { version: 1, sessions: [], settings: DEFAULT_SETTINGS, notes: {}, customExercises: [] }
-}
-
-function load(): AppState {
+function readKey(key: string): string | null {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return initial()
-    const parsed = JSON.parse(raw) as AppState
-    return {
-      ...initial(),
-      ...parsed,
-      settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
-      notes: parsed.notes ?? {},
-      customExercises: parsed.customExercises ?? [],
-    }
+    return localStorage.getItem(key)
   } catch {
-    return initial()
+    return null
   }
 }
 
-let state: AppState = load()
+function writeKey(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/* ---------- Load ---------- */
+
+function load(): { state: AppState; loadIssue: StoreStatus['loadIssue'] } {
+  const raw = readKey(STORAGE_KEY)
+  if (!raw) return { state: initialState(), loadIssue: null }
+  let json: unknown
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    // Keep the original before anything overwrites it.
+    writeKey(CORRUPT_KEY, raw)
+    return { state: initialState(), loadIssue: 'corrupt' }
+  }
+  const result = parseState(json)
+  if (!result.ok) {
+    writeKey(CORRUPT_KEY, raw)
+    return { state: initialState(), loadIssue: 'corrupt' }
+  }
+  if (result.dropped > 0) {
+    writeKey(CORRUPT_KEY, raw)
+    return { state: result.state, loadIssue: 'partial' }
+  }
+  return { state: result.state, loadIssue: null }
+}
+
+const loaded = load()
+let state: AppState = loaded.state
+let status: StoreStatus = { persistError: false, loadIssue: loaded.loadIssue }
 registerCustomExercises(state.customExercises)
 const listeners = new Set<() => void>()
 
+function notify() {
+  listeners.forEach((l) => l())
+}
+
+function setStatus(patch: Partial<StoreStatus>) {
+  const next = { ...status, ...patch }
+  if (next.persistError === status.persistError && next.loadIssue === status.loadIssue) return
+  status = next
+}
+
 function persist() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state))
-  } catch {
-    // Storage full or blocked: the app keeps working in memory.
-  }
+  setStatus({ persistError: !writeKey(STORAGE_KEY, JSON.stringify(state)) })
 }
 
 function set(next: AppState) {
   if (next.customExercises !== state.customExercises) registerCustomExercises(next.customExercises)
   state = next
   persist()
-  listeners.forEach((l) => l())
+  notify()
+}
+
+function subscribe(l: () => void) {
+  listeners.add(l)
+  return () => {
+    listeners.delete(l)
+  }
 }
 
 export function useApp(): AppState {
-  return useSyncExternalStore(
-    (l) => {
-      listeners.add(l)
-      return () => listeners.delete(l)
-    },
-    () => state,
-  )
+  return useSyncExternalStore(subscribe, () => state)
+}
+
+export function useStoreStatus(): StoreStatus {
+  return useSyncExternalStore(subscribe, () => status)
 }
 
 export function getState(): AppState {
   return state
 }
 
+export function getStatus(): StoreStatus {
+  return status
+}
+
 function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 }
+
+function context(): TrainingContext {
+  return { sessions: state.sessions, settings: state.settings, age: state.profile?.age }
+}
+
+/** Keeps the current saved data so a restore or a reset can be undone. */
+function keepPrevious() {
+  writeKey(PREVIOUS_KEY, readKey(STORAGE_KEY) ?? JSON.stringify(state))
+}
+
+export type ImportResult = { ok: true; sessions: number } | { ok: false; message: string }
 
 export const actions = {
   /** Saves the survey answers with the plan the user approved (generated, edited or built from scratch). */
@@ -127,19 +156,31 @@ export const actions = {
   },
 
   startSession(day: PlanDay) {
-    const exercises: ActiveExercise[] = day.exercises.map((plan) => prepareExercise(plan, plan.exerciseId))
+    const ctx = context()
+    const now = new Date()
+    const exercises = day.exercises.map((plan) => prepareExercise(ctx, plan, plan.exerciseId, now))
     set({
       ...state,
-      active: { id: uid(), startedAt: new Date().toISOString(), dayId: day.id, dayName: day.name, exercises, current: 0 },
+      active: { id: uid(), startedAt: now.toISOString(), dayId: day.id, dayName: day.name, exercises, current: 0 },
     })
   },
 
   updateSet(exIndex: number, setIndex: number, patch: Partial<SetLog>) {
+    actions.updateSets(exIndex, [{ index: setIndex, patch }])
+  },
+
+  /** Several set changes of one exercise saved at once (e.g. a new weight carried to the following sets). */
+  updateSets(exIndex: number, changes: { index: number; patch: Partial<SetLog> }[]) {
     const active = state.active
-    if (!active) return
-    const exercises = active.exercises.map((ex, i) =>
-      i !== exIndex ? ex : { ...ex, sets: ex.sets.map((s, j) => (j === setIndex ? { ...s, ...patch } : s)) },
-    )
+    if (!active || changes.length === 0) return
+    const exercises = active.exercises.map((ex, i) => {
+      if (i !== exIndex) return ex
+      const sets = ex.sets.map((s, j) => {
+        const forThis = changes.filter((c) => c.index === j)
+        return forThis.length === 0 ? s : forThis.reduce((acc, c) => ({ ...acc, ...c.patch }), s)
+      })
+      return { ...ex, sets }
+    })
     set({ ...state, active: { ...active, exercises } })
   },
 
@@ -166,12 +207,12 @@ export const actions = {
     const active = state.active
     if (!active) return
     if (inPlan && state.plan) actions.setPlan(replaceExercise(state.plan, active.dayId, exIndex, exerciseId))
+    const ctx = context()
     const exercises = active.exercises.map((ex, i) =>
-      i === exIndex ? prepareExercise({ ...ex.plan, slot: getExercise(exerciseId).slot }, exerciseId) : ex,
+      i === exIndex ? prepareExercise(ctx, { ...ex.plan, slot: getExercise(exerciseId).slot }, exerciseId) : ex,
     )
     set({ ...state, active: { ...active, exercises } })
   },
-
 
   setCurrent(index: number) {
     const active = state.active
@@ -187,41 +228,23 @@ export const actions = {
     set({ ...state, notes })
   },
 
-
-
-
   /** Saves corrections to a past session; a session left without sets is removed. */
   replaceSession(session: Session) {
-    const exercises = session.exercises
-      .map((e) => ({ ...e, sets: e.sets.filter((s) => s.reps > 0) }))
-      .filter((e) => e.sets.length > 0)
-    const sessions =
-      exercises.length === 0
-        ? state.sessions.filter((s) => s.id !== session.id)
-        : state.sessions.map((s) => (s.id === session.id ? { ...session, exercises } : s))
+    const clean = cleanEdited(session)
+    const sessions = clean
+      ? state.sessions.map((s) => (s.id === session.id ? clean : s))
+      : state.sessions.filter((s) => s.id !== session.id)
     set({ ...state, sessions })
   },
 
-  finishSession() {
+  /** Saves the running session and returns what was saved, or null when no set was marked. */
+  finishSession(): Session | null {
     const active = state.active
-    if (!active) return
-    const session: Session = {
-      id: active.id,
-      date: new Date().toISOString(),
-      dayId: active.dayId,
-      dayName: active.dayName,
-      exercises: active.exercises
-        .filter((ex) => ex.sets.some((s) => s.done))
-        .map((ex) => ({
-          exerciseId: ex.exerciseId,
-          repMin: ex.plan.repMin,
-          repMax: ex.plan.repMax,
-          feel: ex.feel,
-          sets: ex.sets.filter((s) => s.done),
-        })),
-    }
-    const sessions = session.exercises.length > 0 ? [...state.sessions, session] : state.sessions
+    if (!active) return null
+    const session = toSession(active)
+    const sessions = session ? [...state.sessions, session] : state.sessions
     set({ ...state, sessions, active: undefined })
+    return session
   },
 
   discardSession() {
@@ -232,43 +255,68 @@ export const actions = {
     set({ ...state, sessions: state.sessions.filter((s) => s.id !== id) })
   },
 
-  importData(data: AppState) {
-    set({
-      ...initial(),
-      ...data,
-      settings: { ...DEFAULT_SETTINGS, ...data.settings },
-      notes: data.notes ?? {},
-      customExercises: data.customExercises ?? [],
-      active: undefined,
-    })
+  /** Replaces all data with a backup after validating it. The current data is kept so it can be restored. */
+  importData(raw: unknown): ImportResult {
+    const result = parseState(raw)
+    if (!result.ok) return { ok: false, message: result.error }
+    if (result.dropped > 0) {
+      return { ok: false, message: 'El respaldo tiene datos dañados o incompletos. No cambiamos nada.' }
+    }
+    if (result.unknownExercises.length > 0) {
+      return {
+        ok: false,
+        message: 'El respaldo usa ejercicios que esta versión de gAInlab no conoce. Actualiza la app y vuelve a intentarlo.',
+      }
+    }
+    keepPrevious()
+    set({ ...result.state, active: undefined })
+    return { ok: true, sessions: result.state.sessions.length }
+  },
+
+  /** True when there is a copy from before the last restore or reset. */
+  hasPrevious(): boolean {
+    return readKey(PREVIOUS_KEY) !== null
+  },
+
+  /** Goes back to the data from before the last restore or reset; the replaced data becomes the new copy. */
+  restorePrevious(): boolean {
+    const raw = readKey(PREVIOUS_KEY)
+    if (!raw) return false
+    let json: unknown
+    try {
+      json = JSON.parse(raw)
+    } catch {
+      return false
+    }
+    const result = parseState(json)
+    if (!result.ok) return false
+    keepPrevious()
+    set(result.state)
+    return true
   },
 
   resetAll() {
-    set(initial())
+    keepPrevious()
+    set(initialState())
+  },
+
+  dismissLoadIssue() {
+    setStatus({ loadIssue: null })
+    notify()
   },
 }
 
-function prepareExercise(plan: PlanExercise, exerciseId: string): ActiveExercise {
-  const target = { ...plan, exerciseId }
-  const prescription = prescribe(target, historyFor(exerciseId, state.sessions), state.settings, new Date(), state.profile?.age)
-  // In calibration the reps start empty so the user logs what they actually did.
-  const calibrating = prescription.mode === 'calibracion'
-  const sets: SetLog[] = prescription.reps.map((reps) => ({
-    weight: prescription.weight ?? 0,
-    reps: calibrating ? 0 : reps,
-    done: false,
-  }))
-  return { plan: target, exerciseId, prescription, sets }
-}
-
-/** Next day in the rotation: the one after the last completed day. */
-export function nextDay(plan: Plan, sessions: Session[]): PlanDay {
-  const last = sessions[sessions.length - 1]
-  if (!last) return plan.days[0]
-  const index = plan.days.findIndex((d) => d.id === last.dayId)
-  return plan.days[(index + 1) % plan.days.length]
-}
-
+/** Backup of the current data, without the session in progress. */
 export function exportData(): string {
   return JSON.stringify({ ...state, active: undefined }, null, 2)
+}
+
+/** Everything saved on this device as it is, for the emergency screen. Falls back to the data in memory. */
+export function rawSavedData(): string {
+  return readKey(STORAGE_KEY) ?? exportData()
+}
+
+/** The original data that could not be read when the app opened, if any. */
+export function corruptData(): string | null {
+  return readKey(CORRUPT_KEY)
 }

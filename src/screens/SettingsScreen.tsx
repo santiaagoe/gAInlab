@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
+import { AgePicker } from '../components/AgePicker'
 import { PlanEditor } from '../components/PlanEditor'
-import { AGE_GROUPS, AGE_LABELS, ageSummary } from '../engine/age'
+import { ageSummary } from '../engine/age'
 import type { Plan, Profile, Settings } from '../engine/types'
-import { kg } from '../format'
-import { actions, exportData, type AppState } from '../store'
+import { backupName, downloadText } from '../download'
+import { kg, plural } from '../format'
+import { actions, exportData } from '../store'
 
 interface Props {
   plan: Plan
@@ -25,26 +27,33 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
   const [message, setMessage] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
 
+  const [canUndo, setCanUndo] = useState(false)
+
   const download = () => {
-    const blob = new Blob([exportData()], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `gainlab-respaldo-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadText(exportData(), backupName())
     setMessage('Respaldo descargado.')
   }
 
   const restore = async (file: File) => {
+    let data: unknown
     try {
-      const data = JSON.parse(await file.text()) as AppState
-      if (data.version !== 1 || !Array.isArray(data.sessions)) throw new Error('formato')
-      actions.importData(data)
-      setMessage(`Respaldo restaurado: ${data.sessions.length} sesiones.`)
+      data = JSON.parse(await file.text())
     } catch {
       setMessage('Ese archivo no es un respaldo de gAInlab. Elige el .json que descargaste desde esta pantalla.')
+      return
     }
+    const result = actions.importData(data)
+    if (result.ok) {
+      setMessage(`Respaldo restaurado: ${plural(result.sessions, 'sesión', 'sesiones')}.`)
+      setCanUndo(true)
+    } else {
+      setMessage(result.message)
+    }
+  }
+
+  const undoRestore = () => {
+    setCanUndo(false)
+    setMessage(actions.restorePrevious() ? 'Volviste a tus datos de antes de restaurar.' : 'No encontramos la copia anterior.')
   }
 
   return (
@@ -55,8 +64,24 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
 
       {message && (
         <div className="banner" role="status">
-          <span>{message}</span>
-          <button onClick={() => setMessage(null)} aria-label="Cerrar">
+          <span>
+            {message}
+            {canUndo && (
+              <>
+                {' '}
+                <button className="link" onClick={undoRestore}>
+                  Deshacer
+                </button>
+              </>
+            )}
+          </span>
+          <button
+            onClick={() => {
+              setMessage(null)
+              setCanUndo(false)
+            }}
+            aria-label="Cerrar"
+          >
             ✕
           </button>
         </div>
@@ -100,13 +125,7 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
         <p className="lede small">
           Ajusta los saltos de peso, cuándo subir, el calentamiento y el regreso tras una pausa desde tu próxima sesión.
         </p>
-        <div className="chips" role="group" aria-label="Edad" style={{ marginTop: 12 }}>
-          {AGE_GROUPS.map((g) => (
-            <button key={g} aria-pressed={profile.age === g} onClick={() => actions.updateProfile({ age: g })}>
-              {AGE_LABELS[g]}
-            </button>
-          ))}
-        </div>
+        <AgePicker value={profile.age} onPick={(g) => actions.updateProfile({ age: g })} style={{ marginTop: 12 }} />
         {ageSummary(profile.age) && <div className="note ai">{ageSummary(profile.age)}</div>}
         {profile.age && !plan.custom && (
           <p className="small muted">Para adaptar también las series y los descansos de tu rutina, rehaz la encuesta.</p>
@@ -205,7 +224,7 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
       </section>
 
       <p className="small muted" style={{ marginTop: 32, textAlign: 'center' }}>
-        gAInlab versión 0.4
+        gAInlab versión {__APP_VERSION__}
       </p>
     </>
   )

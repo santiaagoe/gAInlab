@@ -43,6 +43,8 @@ describe('prescribe', () => {
 
   it('consolidates reps after a set taken to the limit', () => {
     const p = prescribe(bench, [entry(2, 50, [10, 9, 8], 'limite')], settings, now)
+    expect(p.mode).toBe('mantener')
+    expect(p.weight).toBe(50)
     expect(p.reps).toEqual([10, 9, 8])
   })
 
@@ -55,7 +57,9 @@ describe('prescribe', () => {
 
   it('jumps two steps on a compound lift that felt easy', () => {
     const p = prescribe(bench, [entry(2, 50, [12, 12, 12], 'facil')], settings, now)
+    expect(p.mode).toBe('subir')
     expect(p.weight).toBe(55)
+    expect(p.reps).toEqual([8, 8, 8])
   })
 
   it('repeats the weight after one session below range, deloads after two', () => {
@@ -70,14 +74,16 @@ describe('prescribe', () => {
   it('recalibrates when a calibration weight was far too light', () => {
     const p = prescribe(bench, [entry(2, 40, [20, 18, 16], 'facil')], settings, now)
     expect(p.mode).toBe('ajuste')
-    expect(p.weight!).toBeGreaterThan(40)
-    expect(p.weight! % 2.5).toBe(0)
+    expect(p.weight).toBe(52.5)
+    expect(p.reps).toEqual([9, 9, 9])
   })
 
   it('applies return mode after a long gap', () => {
     const p = prescribe(bench, [entry(35, 60, [10, 10, 10])], settings, now)
     expect(p.mode).toBe('regreso')
     expect(p.weight).toBe(47.5)
+    expect(p.reps).toEqual([8, 8, 8])
+    expect(p.recoverTo).toBe(60)
   })
 })
 
@@ -133,7 +139,7 @@ describe('buildPlan', () => {
 
   it('uses low reps for strength', () => {
     const plan = buildPlan({ ...base, goal: 'fuerza' })
-    const main = plan.days[0].exercises[0]
+    const main = plan.days[0].exercises.find((e) => e.role === 'principal')!
     expect(main.repMax).toBeLessThanOrEqual(6)
   })
 })

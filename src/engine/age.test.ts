@@ -71,18 +71,18 @@ describe('age in progression', () => {
 describe('age in plans', () => {
   it('raises strength rep ranges and caps main sets for older and younger lifters', () => {
     const strong = buildPlan(profile('60-69', { goal: 'fuerza', experience: 'mas1' }))
-    const main = strong.days[0].exercises[0]
+    const main = strong.days[0].exercises.find((e) => e.role === 'principal')!
     expect(main.repMin).toBeGreaterThanOrEqual(8)
     expect(main.sets).toBeLessThanOrEqual(3)
     const teen = buildPlan(profile('menor', { goal: 'fuerza' }))
-    expect(teen.days[0].exercises[0].repMin).toBeGreaterThanOrEqual(6)
+    expect(teen.days[0].exercises.find((e) => e.role === 'principal')!.repMin).toBeGreaterThanOrEqual(6)
     const adult = buildPlan(profile('30-39', { goal: 'fuerza' }))
-    expect(adult.days[0].exercises[0].repMin).toBe(4)
+    expect(adult.days[0].exercises.find((e) => e.role === 'principal')!.repMin).toBe(4)
   })
 
   it('adds rest between sets with age', () => {
-    const young = buildPlan(profile('18-29')).days[0].exercises[0].rest
-    const older = buildPlan(profile('50-59')).days[0].exercises[0].rest
+    const young = buildPlan(profile('18-29')).days[0].exercises.find((e) => e.role === 'principal')!.rest
+    const older = buildPlan(profile('50-59')).days[0].exercises.find((e) => e.role === 'principal')!.rest
     expect(older).toBe(young + 30)
   })
 
@@ -91,7 +91,7 @@ describe('age in plans', () => {
     const squat = plan.days[0].exercises.find((e) => e.slot === 'sentadilla')!
     expect(getExercise(squat.exerciseId).kind).not.toBe('barra')
     const experienced = buildPlan(profile('60-69', { experience: 'mas1' }))
-    expect(experienced.days[0].exercises[0].exerciseId).toBe('sentadilla-barra')
+    expect(experienced.days[0].exercises.find((e) => e.slot === 'sentadilla')!.exerciseId).toBe('sentadilla-barra')
   })
 
   it('explains the age adjustments in the summary', () => {

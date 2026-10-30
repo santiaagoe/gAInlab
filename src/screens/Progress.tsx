@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { HistoryRow } from '../components/HistoryRow'
 import { SessionEditor } from '../components/SessionEditor'
 import { findExercise } from '../engine/exercises'
 import { bestE1rm, historyFor } from '../engine/progression'
 import type { Session } from '../engine/types'
-import { kg, relativeDay, setsText, shortDate, weekStart } from '../format'
+import { kg, sessionsInWeek, setsText, shortDate, weekStart, weekStreak } from '../format'
 
 const WEEKS = 8
 
 export function Progress({ sessions, targetDays }: { sessions: Session[]; targetDays: number }) {
   const weeks = useMemo(() => weeklyCounts(sessions), [sessions])
-  const streak = useMemo(() => weekStreak(weeks, targetDays), [weeks, targetDays])
+  const streak = useMemo(() => weekStreak(sessions, targetDays), [sessions, targetDays])
 
   const exerciseIds = useMemo(() => {
     const counts = new Map<string, number>()
@@ -164,12 +165,7 @@ export function Progress({ sessions, targetDays }: { sessions: Session[]; target
         ) : (
           <>
             {visible.map((s) => (
-              <button className="history-btn" key={s.id} onClick={() => setEditing(s)}>
-                <span>{s.dayName}</span>
-                <span className="meta">
-                  {relativeDay(s.date)}, {s.exercises.reduce((n, e) => n + e.sets.length, 0)} series
-                </span>
-              </button>
+              <HistoryRow key={s.id} session={s} onOpen={setEditing} />
             ))}
             {newestFirst.length > visible.length && (
               <button className="add-exercise" onClick={() => setShowAll(true)}>
@@ -190,24 +186,6 @@ function weeklyCounts(sessions: Session[], now = new Date()): { label: string; c
   return Array.from({ length: WEEKS }, (_, i) => {
     const start = new Date(current)
     start.setDate(start.getDate() - (WEEKS - 1 - i) * 7)
-    const end = new Date(start)
-    end.setDate(end.getDate() + 7)
-    const count = sessions.filter((s) => {
-      const t = new Date(s.date).getTime()
-      return t >= start.getTime() && t < end.getTime()
-    }).length
-    return { label: i === WEEKS - 1 ? 'Esta' : `${start.getDate()}/${start.getMonth() + 1}`, count }
+    return { label: i === WEEKS - 1 ? 'Esta' : `${start.getDate()}/${start.getMonth() + 1}`, count: sessionsInWeek(sessions, start) }
   })
-}
-
-function weekStreak(weeks: { count: number }[], target: number): number {
-  let streak = 0
-  // The current week only counts once it is met; an unfinished week does not break the streak.
-  const lastIndex = weeks.length - 1
-  if (weeks[lastIndex].count >= target) streak++
-  for (let i = lastIndex - 1; i >= 0; i--) {
-    if (weeks[i].count >= target) streak++
-    else break
-  }
-  return streak
 }

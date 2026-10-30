@@ -60,6 +60,8 @@ export interface Exercise {
   muscles?: Muscle[]
   /** Created by the user. */
   custom?: boolean
+  /** Placeholder for an id that is not in the library. */
+  unknown?: boolean
 }
 
 /** An exercise the user adds when it is not in the library. */
@@ -110,6 +112,8 @@ export interface ExerciseLog {
   repMax: number
   sets: SetLog[]
   feel?: Feel
+  /** Weight used before a break; while below it, the progression climbs back faster. */
+  recoverTo?: number
 }
 
 export interface Session {
@@ -144,4 +148,24 @@ export interface Prescription {
   delta: number
   note: string
   last?: { date: string; log: ExerciseLog }
+  /** Weight to climb back to after a break (saved with the session). */
+  recoverTo?: number
+}
+
+export interface ActiveExercise {
+  plan: PlanExercise
+  exerciseId: string
+  prescription: Prescription
+  sets: SetLog[]
+  feel?: Feel
+}
+
+export interface ActiveSession {
+  id: string
+  startedAt: string
+  dayId: string
+  dayName: string
+  exercises: ActiveExercise[]
+  /** Exercise shown in focus mode. */
+  current?: number
 }

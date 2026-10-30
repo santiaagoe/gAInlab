@@ -1,12 +1,13 @@
 import { useState } from 'react'
+import { AgePicker } from '../components/AgePicker'
+import { HistoryRow } from '../components/HistoryRow'
 import { SessionEditor } from '../components/SessionEditor'
 import { getExercise } from '../engine/exercises'
 import { dayFocus } from '../engine/planEdit'
-import { historyFor, prescribe } from '../engine/progression'
-import { AGE_GROUPS, AGE_LABELS } from '../engine/age'
+import { nextDay, prescriptionFor } from '../engine/session'
 import type { AgeGroup, Plan, Session, Settings } from '../engine/types'
-import { chipText, kg, relativeDay, sessionsThisWeek, toneFor } from '../format'
-import { actions, nextDay } from '../store'
+import { chipText, kg, plural, sessionsThisWeek, toneFor } from '../format'
+import { actions } from '../store'
 
 interface Props {
   plan: Plan
@@ -20,9 +21,18 @@ interface Props {
 
 export function Today({ plan, sessions, settings, targetDays, age, justFinished, onDismissFinished }: Props) {
   const suggested = nextDay(plan, sessions)
-  const [dayId, setDayId] = useState(suggested.id)
+  const [dayId, setDayId] = useState(suggested?.id)
   const [editing, setEditing] = useState<Session | null>(null)
   const day = plan.days.find((d) => d.id === dayId) ?? suggested
+  if (!day) {
+    return (
+      <div className="empty" style={{ marginTop: 24 }}>
+        Tu plan no tiene días. Añade uno en Ajustes, en Tu plan.
+      </div>
+    )
+  }
+  const ctx = { sessions, settings, age }
+  const now = new Date()
   const week = sessionsThisWeek(sessions)
   const recent = sessions.slice(-4).reverse()
 
@@ -51,13 +61,7 @@ export function Today({ plan, sessions, settings, targetDays, age, justFinished,
           <p className="small muted">
             No todas las edades progresan igual. Con tu edad ajustamos los saltos de peso, los descansos y el regreso tras una pausa.
           </p>
-          <div className="chips" role="group" aria-label="Edad">
-            {AGE_GROUPS.map((g) => (
-              <button key={g} onClick={() => actions.updateProfile({ age: g })}>
-                {AGE_LABELS[g]}
-              </button>
-            ))}
-          </div>
+          <AgePicker onPick={(g) => actions.updateProfile({ age: g })} />
         </div>
       )}
 
@@ -74,18 +78,18 @@ export function Today({ plan, sessions, settings, targetDays, age, justFinished,
       )}
 
       <section className="hero">
-        <div className="eyebrow">{day.id === suggested.id ? 'Hoy toca' : 'Elegiste'}</div>
+        <div className="eyebrow">{day.id === suggested?.id ? 'Hoy toca' : 'Elegiste'}</div>
         <h1 className="display">{day.name}</h1>
         <p className="lede">{dayFocus(day)}</p>
 
         <div className="rx-list">
-          {day.exercises.map((pe) => {
+          {day.exercises.map((pe, i) => {
             const ex = getExercise(pe.exerciseId)
-            const rx = prescribe(pe, historyFor(pe.exerciseId, sessions), settings, new Date(), age)
+            const rx = prescriptionFor(ctx, pe, now)
             const tone = toneFor(rx.mode)
             const reps = rx.reps.every((r) => r === rx.reps[0]) ? `${rx.reps.length} × ${rx.reps[0]}` : rx.reps.join(', ')
             return (
-              <div className="rx" key={pe.exerciseId}>
+              <div className="rx" key={`${i}-${pe.exerciseId}`}>
                 <div className="rx-name">{ex.name}</div>
                 <div className="rx-load">
                   {rx.weight === null ? (
@@ -143,12 +147,7 @@ export function Today({ plan, sessions, settings, targetDays, age, justFinished,
         ) : (
           <>
             {recent.map((s) => (
-              <button className="history-btn" key={s.id} onClick={() => setEditing(s)}>
-                <span>{s.dayName}</span>
-                <span className="meta">
-                  {relativeDay(s.date)}, {s.exercises.reduce((n, e) => n + e.sets.length, 0)} series
-                </span>
-              </button>
+              <HistoryRow key={s.id} session={s} onOpen={setEditing} />
             ))}
             <p className="small muted">Toca una sesión para corregir lo que anotaste.</p>
           </>
@@ -158,8 +157,4 @@ export function Today({ plan, sessions, settings, targetDays, age, justFinished,
       {editing && <SessionEditor session={editing} onClose={() => setEditing(null)} />}
     </>
   )
-}
-
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`
 }
