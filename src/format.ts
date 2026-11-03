@@ -1,4 +1,4 @@
-import type { ExerciseLog, Feel, PrescriptionMode, Session } from './engine/types'
+import type { ExerciseLog, Feel, Kind, PrescriptionMode, Session } from './engine/types'
 import { calendarDaysBetween, kg } from './engine/units'
 
 export { clock, formatKg, kg } from './engine/units'
@@ -40,6 +40,11 @@ export function chipText(mode: PrescriptionMode, delta: number): string {
   if (delta < 0) return `−${kg(Math.abs(delta))} kg`
   if (mode === 'repetir') return 'Repetir'
   return '+1 rep'
+}
+
+/** Dumbbell weights are always per dumbbell (the number printed on it), never the pair. */
+export function weightUnit(kind: Kind): string {
+  return kind === 'mancuerna' ? 'kg c/u' : 'kg'
 }
 
 export function setsText(log: ExerciseLog): string {

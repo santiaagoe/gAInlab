@@ -4,15 +4,11 @@ import { IconCheck, IconFocus, IconList, IconNext, IconPrev, IconSwap } from '..
 import { NumField } from '../components/NumField'
 import { getExercise } from '../engine/exercises'
 import { incrementFor, warmupSets } from '../engine/progression'
-import type { AgeGroup, Plan, Profile, Session, SetLog, Settings } from '../engine/types'
-import { clock, FEEL_OPTIONS, kg, relativeDay, setsText, toneFor } from '../format'
-import { actions, type ActiveExercise, type ActiveSession } from '../store'
-
-interface Rest {
-  endsAt: number
-  total: number
-  label: string
-}
+import { canMark, restLabel, restLeft, shouldAlert, shouldAutoMark } from '../engine/rest'
+import type { AgeGroup, Plan, Profile, RestState, Session, SetLog, Settings } from '../engine/types'
+import { clock, FEEL_OPTIONS, kg, relativeDay, setsText, toneFor, weightUnit } from '../format'
+import { restOverAlert, unlockAudio } from '../sound'
+import { actions, getState, type ActiveExercise, type ActiveSession } from '../store'
 
 interface Props {
   active: ActiveSession
@@ -25,7 +21,7 @@ interface Props {
 }
 
 export function SessionScreen({ active, plan, profile, settings, notes, onFinished }: Props) {
-  const [rest, setRest] = useState<Rest | null>(null)
+  const rest = active.rest
   const [swapIndex, setSwapIndex] = useState<number | null>(null)
   const [confirm, setConfirm] = useState(false)
   const elapsed = useElapsed(active.startedAt)
@@ -37,8 +33,6 @@ export function SessionScreen({ active, plan, profile, settings, notes, onFinish
     (acc, ex) => ({ done: acc.done + ex.sets.filter((s) => s.done).length, all: acc.all + ex.sets.length }),
     { done: 0, all: 0 },
   )
-
-  const startRest = (seconds: number, label: string) => setRest({ endsAt: Date.now() + seconds * 1000, total: seconds, label })
 
   const finish = () => {
     if (totals.done === totals.all) {
@@ -68,7 +62,6 @@ export function SessionScreen({ active, plan, profile, settings, notes, onFinish
       age={profile.age}
       note={notes[ex.exerciseId] ?? ''}
       nextName={nextName(i)}
-      onRest={startRest}
       onSwap={() => setSwapIndex(i)}
     />
   )
@@ -124,8 +117,8 @@ export function SessionScreen({ active, plan, profile, settings, notes, onFinish
         <RestTimer
           rest={rest}
           raised={focus}
-          onAdd={() => setRest({ ...rest, endsAt: rest.endsAt + 30_000, total: rest.total + 30 })}
-          onClose={() => setRest(null)}
+          onAdd={() => actions.addRestTime(30)}
+          onClose={() => actions.stopRest()}
         />
       )}
 
@@ -296,7 +289,6 @@ function ExerciseBlock({
   age,
   note,
   nextName,
-  onRest,
   onSwap,
 }: {
   ex: ActiveExercise
@@ -306,13 +298,13 @@ function ExerciseBlock({
   age?: AgeGroup
   note: string
   nextName: string | null
-  onRest: (seconds: number, label: string) => void
   onSwap: () => void
 }) {
   const info = getExercise(ex.exerciseId)
   const rx = ex.prescription
   const tone = toneFor(rx.mode)
   const bodyweight = info.kind === 'corporal'
+  const unit = weightUnit(info.kind)
   const [invalid, setInvalid] = useState<number | null>(null)
   const anyDone = ex.sets.some((s) => s.done)
   const nextSet = ex.sets.findIndex((s) => !s.done)
@@ -331,19 +323,29 @@ function ExerciseBlock({
     if (invalid === setIndex) setInvalid(null)
   }
 
+  const mark = (current: ActiveExercise, setIndex: number) => {
+    unlockAudio()
+    if (invalid === setIndex) setInvalid(null)
+    actions.completeSet(index, setIndex, current.plan.rest, restLabel(current, setIndex, nextName !== null))
+  }
+
   const toggle = (setIndex: number, s: SetLog) => {
     if (s.done) {
       actions.updateSet(index, setIndex, { done: false })
       return
     }
-    if ((!bodyweight && s.weight <= 0) || s.reps <= 0) {
+    if (!canMark(s.weight, s.reps, bodyweight)) {
       setInvalid(setIndex)
       return
     }
-    actions.updateSet(index, setIndex, { done: true })
-    const remaining = ex.sets.filter((x, j) => j !== setIndex && !x.done).length
-    const label = remaining > 0 ? `Descanso, ${remaining === 1 ? 'falta 1 serie' : `faltan ${remaining} series`}` : nextName ? 'Ejercicio listo' : 'Última serie lista'
-    onRest(ex.plan.rest, label)
+    mark(ex, setIndex)
+  }
+
+  /** Typing the reps of the next set and closing the keyboard marks it and starts the rest. */
+  const repsDone = (setIndex: number, changed: boolean) => {
+    // Read the saved state: the last keystroke may not have reached this render yet.
+    const current = getState().active?.exercises[index]
+    if (current && shouldAutoMark(current, setIndex, changed, bodyweight)) mark(current, setIndex)
   }
 
   return (
@@ -355,7 +357,8 @@ function ExerciseBlock({
           </div>
           <h2 id={`ex-${index}`}>{info.name}</h2>
           <div className="small muted num">
-            {ex.plan.sets} series de {ex.plan.repMin}–{ex.plan.repMax} reps
+            {ex.plan.sets} series de {ex.plan.repMin}–{ex.plan.repMax} reps,{' '}
+            <span style={{ whiteSpace: 'nowrap' }}>descanso {clock(ex.plan.rest)}</span>
           </div>
         </div>
         <button className="ex-swap" onClick={onSwap}>
@@ -376,14 +379,14 @@ function ExerciseBlock({
       {warmup.length > 0 && (
         <div className="warmup">
           <span className="warmup-label">Calentamiento</span>
-          <span className="num">{warmup.map((w) => `${kg(w.weight)} kg × ${w.reps}`).join(', ')}</span>
+          <span className="num">{warmup.map((w) => `${kg(w.weight)} ${unit} × ${w.reps}`).join(', ')}</span>
         </div>
       )}
 
       <div className="sets">
         <div className="set-row set-head" aria-hidden>
           <span className="idx">#</span>
-          <span>{bodyweight ? 'Lastre' : 'Peso'}</span>
+          <span>{bodyweight ? 'Lastre' : info.kind === 'mancuerna' ? 'Peso c/u' : 'Peso'}</span>
           <span>Reps</span>
           <span />
         </div>
@@ -406,6 +409,7 @@ function ExerciseBlock({
               invalid={invalid === j && s.reps <= 0}
               label={`Repeticiones serie ${j + 1}`}
               onChange={(v) => actions.updateSet(index, j, { reps: v })}
+              onCommit={(changed) => repsDone(j, changed)}
             />
             <button
               className="check"
@@ -497,29 +501,31 @@ function NoteLine({ exerciseId, note }: { exerciseId: string; note: string }) {
 
 /* ---------- Rest timer ---------- */
 
-function RestTimer({ rest, raised, onAdd, onClose }: { rest: Rest; raised: boolean; onAdd: () => void; onClose: () => void }) {
+function RestTimer({ rest, raised, onAdd, onClose }: { rest: RestState; raised: boolean; onAdd: () => void; onClose: () => void }) {
   const [now, setNow] = useState(Date.now())
-  const alerted = useRef(false)
+  const alerted = useRef<number | null>(null)
 
   useEffect(() => {
-    alerted.current = false
-  }, [rest.endsAt])
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(id)
+    const tick = () => setNow(Date.now())
+    const id = setInterval(tick, 250)
+    // Coming back to the app: show the real time right away instead of waiting for the next tick.
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', tick)
+    }
   }, [])
 
-  const left = Math.round((rest.endsAt - now) / 1000)
+  const left = restLeft(rest, now)
   const over = left <= 0
 
   useEffect(() => {
-    if (over && !alerted.current) {
-      alerted.current = true
-      navigator.vibrate?.([200, 100, 200])
-      beep()
+    // Once per rest, and only right when it ends: no late beep when coming back to the app long after.
+    if (over && alerted.current !== rest.endsAt) {
+      alerted.current = rest.endsAt
+      if (shouldAlert(rest, Date.now())) restOverAlert()
     }
-  }, [over])
+  }, [over, rest])
 
   const shown = Math.abs(left)
   const time = `${over ? '+' : ''}${clock(shown)}`
@@ -543,22 +549,4 @@ function useElapsed(startedAt: string): number {
     return () => clearInterval(id)
   }, [])
   return Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 60_000))
-}
-
-let audio: AudioContext | null = null
-function beep() {
-  try {
-    audio ??= new AudioContext()
-    const osc = audio.createOscillator()
-    const gain = audio.createGain()
-    osc.frequency.value = 880
-    gain.gain.setValueAtTime(0.0001, audio.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.3, audio.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.4)
-    osc.connect(gain).connect(audio.destination)
-    osc.start()
-    osc.stop(audio.currentTime + 0.4)
-  } catch {
-    // Audio not available: vibration and the visual cue are enough.
-  }
 }

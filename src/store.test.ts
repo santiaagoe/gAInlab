@@ -109,6 +109,46 @@ describe('store: sessions', () => {
   })
 })
 
+describe('store: rest between sets', () => {
+  it('marks the set and starts the rest in one save, and the rest survives reopening the app', async () => {
+    const { store, storage } = await freshStore()
+    store.actions.completeOnboarding(profile)
+    store.actions.startSession(store.getState().plan!.days[0])
+    const spy = vi.spyOn(storage, 'setItem')
+    store.actions.completeSet(0, 0, 180, 'Descanso, faltan 2 series')
+    expect(spy).toHaveBeenCalledTimes(1)
+    const active = store.getState().active!
+    expect(active.exercises[0].sets[0].done).toBe(true)
+    expect(active.rest).toEqual({ endsAt: Date.now() + 180_000, total: 180, label: 'Descanso, faltan 2 series' })
+
+    // The phone closes the app in the background: the timer is still there with the same end time.
+    const reopened = await freshStore({ [STORAGE_KEY]: storage.getItem(STORAGE_KEY)! })
+    expect(reopened.store.getState().active!.rest!.endsAt).toBe(active.rest!.endsAt)
+  })
+
+  it('each new set restarts the rest from the full length', async () => {
+    const { store } = await freshStore()
+    store.actions.completeOnboarding(profile)
+    store.actions.startSession(store.getState().plan!.days[0])
+    store.actions.completeSet(0, 0, 180, 'a')
+    vi.advanceTimersByTime(200_000)
+    store.actions.completeSet(0, 1, 180, 'b')
+    expect(store.getState().active!.rest!.endsAt).toBe(Date.now() + 180_000)
+  })
+
+  it('adds time and stops the rest', async () => {
+    const { store } = await freshStore()
+    store.actions.completeOnboarding(profile)
+    store.actions.startSession(store.getState().plan!.days[0])
+    store.actions.completeSet(0, 0, 90, 'a')
+    store.actions.addRestTime(30)
+    expect(store.getState().active!.rest!.total).toBe(120)
+    store.actions.stopRest()
+    expect(store.getState().active!.rest).toBeUndefined()
+    expect(store.getState().active!.exercises[0].sets[0].done).toBe(true)
+  })
+})
+
 describe('store: saving and loading', () => {
   it('keeps the original when saved data cannot be parsed', async () => {
     const { store, storage } = await freshStore({ [STORAGE_KEY]: '{roto' })

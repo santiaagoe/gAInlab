@@ -168,4 +168,14 @@ export interface ActiveSession {
   exercises: ActiveExercise[]
   /** Exercise shown in focus mode. */
   current?: number
+  /** Rest running between sets. Saved so it survives the phone closing the app in the background. */
+  rest?: RestState
+}
+
+export interface RestState {
+  /** When the rest ends, in ms since epoch. The time left is always computed from this, never counted down. */
+  endsAt: number
+  /** Planned length in seconds, for the progress bar. */
+  total: number
+  label: string
 }

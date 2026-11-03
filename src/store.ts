@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { getExercise, registerCustomExercises } from './engine/exercises'
 import { buildPlan } from './engine/plan'
 import { replaceExercise } from './engine/planEdit'
+import { extendRest, startRest } from './engine/rest'
 import { cleanEdited, prepareExercise, toSession, type TrainingContext } from './engine/session'
 import type { CustomExercise, Feel, Kind, Muscle, Plan, PlanDay, Profile, Session, SetLog, Settings } from './engine/types'
 import { CORRUPT_KEY, initialState, parseState, PREVIOUS_KEY, STORAGE_KEY, type AppState } from './persistence'
@@ -212,6 +213,29 @@ export const actions = {
       i === exIndex ? prepareExercise(ctx, { ...ex.plan, slot: getExercise(exerciseId).slot }, exerciseId) : ex,
     )
     set({ ...state, active: { ...active, exercises } })
+  },
+
+  /** Marks a set as done and starts the rest in a single save, so the timer always restarts from the full length. */
+  completeSet(exIndex: number, setIndex: number, restSeconds: number, label: string) {
+    const active = state.active
+    if (!active) return
+    const exercises = active.exercises.map((ex, i) =>
+      i !== exIndex ? ex : { ...ex, sets: ex.sets.map((s, j) => (j === setIndex ? { ...s, done: true } : s)) },
+    )
+    set({ ...state, active: { ...active, exercises, rest: startRest(restSeconds, label) } })
+  },
+
+  addRestTime(seconds: number) {
+    const active = state.active
+    if (!active?.rest) return
+    set({ ...state, active: { ...active, rest: extendRest(active.rest, seconds) } })
+  },
+
+  stopRest() {
+    const active = state.active
+    if (!active?.rest) return
+    const { rest: _rest, ...rest } = active
+    set({ ...state, active: rest })
   },
 
   setCurrent(index: number) {

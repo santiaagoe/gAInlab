@@ -93,6 +93,11 @@ export function SessionEditor({ session, onClose }: { session: Session; onClose:
       {draft.exercises.map((ex, ei) => (
         <div className="edit-ex" key={`${ei}-${ex.exerciseId}`}>
           <h3>{findExercise(ex.exerciseId)?.name ?? 'Ejercicio no encontrado'}</h3>
+          {findExercise(ex.exerciseId)?.kind === 'mancuerna' && (
+            <p className="muted small" style={{ margin: '0 0 6px' }}>
+              Peso por mancuerna
+            </p>
+          )}
           {ex.sets.map((s, si) => (
             <div className="edit-set-row" key={si}>
               <span className="idx num muted small">{si + 1}</span>

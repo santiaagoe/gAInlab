@@ -6,9 +6,11 @@ import { SettingsScreen } from './screens/SettingsScreen'
 import { Today } from './screens/Today'
 import { StatusBanner } from './components/StatusBanner'
 import type { Session } from './engine/types'
+import { withReloadOnFail } from './lazyScreen'
 import { useApp } from './store'
 
-const Progress = lazy(() => import('./screens/Progress').then((m) => ({ default: m.Progress })))
+const importProgress = () => import('./screens/Progress')
+const Progress = lazy(withReloadOnFail(() => importProgress().then((m) => ({ default: m.Progress }))))
 
 type Tab = 'hoy' | 'progreso' | 'ajustes'
 
@@ -21,6 +23,13 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [tab, active?.id, redo])
+
+  // Load the Progress screen in the background right away, so it always comes from the same version
+  // as the rest of the app and opens instantly. If this fails, opening the tab tries again.
+  useEffect(() => {
+    const id = setTimeout(() => void importProgress().catch(() => {}), 1500)
+    return () => clearTimeout(id)
+  }, [])
 
   if (!profile || !plan || redo) {
     return (
@@ -71,7 +80,7 @@ export default function App() {
           />
         )}
         {tab === 'progreso' && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<p className="muted small" style={{ padding: 16 }}>Cargando…</p>}>
             <Progress sessions={sessions} targetDays={plan.days.length} />
           </Suspense>
         )}

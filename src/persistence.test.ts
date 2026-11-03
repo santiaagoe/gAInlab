@@ -118,6 +118,29 @@ describe('parseState', () => {
     expect(broken.ok && broken.dropped).toBe(1)
   })
 
+  it('keeps a saved rest and drops a broken one without losing the session', () => {
+    const activeWith = (rest: unknown) => ({
+      id: 'x',
+      startedAt: '2026-01-03T10:00:00Z',
+      dayId: 'd1',
+      dayName: 'Full body A',
+      rest,
+      exercises: [
+        {
+          plan: { exerciseId: 'banca-barra', slot: 'pressHorizontal', role: 'principal', sets: 3, repMin: 8, repMax: 12, rest: 150 },
+          exerciseId: 'banca-barra',
+          prescription: { mode: 'calibracion', weight: null, reps: [12, 12, 12], delta: 0, note: 'Primera vez' },
+          sets: [{ weight: 40, reps: 10, done: true }],
+        },
+      ],
+    })
+    const ok = parseState({ ...saved(), active: activeWith({ endsAt: 1_767_434_400_000, total: 150, label: 'Descanso' }) })
+    expect(ok.ok && ok.state.active?.rest).toEqual({ endsAt: 1_767_434_400_000, total: 150, label: 'Descanso' })
+    const broken = parseState({ ...saved(), active: activeWith({ endsAt: 'mañana', total: 150, label: 'Descanso' }) })
+    expect(broken.ok && broken.state.active?.exercises.length).toBe(1)
+    expect(broken.ok && broken.state.active?.rest).toBeUndefined()
+  })
+
   it('keeps old logs that have no rep range', () => {
     const data = saved()
     const log = data.sessions[0].exercises[0] as Record<string, unknown>

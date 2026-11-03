@@ -375,6 +375,10 @@ function parseActive(v: unknown, report: Report): ActiveSession | null {
   if (exercises.length === 0) return null
   const active: ActiveSession = { id: v.id, startedAt: v.startedAt, dayId: v.dayId, dayName: v.dayName, exercises }
   if (isInt(v.current, 0)) active.current = Math.min(v.current, exercises.length - 1)
+  // A broken rest is just dropped: losing a timer never costs the session.
+  if (isObj(v.rest) && isNum(v.rest.endsAt) && isInt(v.rest.total, 1, 3600) && isStr(v.rest.label)) {
+    active.rest = { endsAt: v.rest.endsAt, total: v.rest.total, label: v.rest.label }
+  }
   return active
 }
 

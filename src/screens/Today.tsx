@@ -6,7 +6,7 @@ import { getExercise } from '../engine/exercises'
 import { dayFocus } from '../engine/planEdit'
 import { nextDay, prescriptionFor } from '../engine/session'
 import type { AgeGroup, Plan, Session, Settings } from '../engine/types'
-import { chipText, kg, plural, sessionsThisWeek, toneFor } from '../format'
+import { chipText, kg, plural, sessionsThisWeek, toneFor, weightUnit } from '../format'
 import { actions } from '../store'
 
 interface Props {
@@ -99,7 +99,7 @@ export function Today({ plan, sessions, settings, targetDays, age, justFinished,
                   ) : (
                     <div className="rx-weight num">
                       {kg(rx.weight)}
-                      <small>kg</small>
+                      <small>{weightUnit(ex.kind)}</small>
                     </div>
                   )}
                   {rx.mode !== 'calibracion' && <span className={`chip ${tone}`}>{chipText(rx.mode, rx.delta)}</span>}
