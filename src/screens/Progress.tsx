@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useMemo, useRef, useState } from 'react'
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { HistoryRow } from '../components/HistoryRow'
 import { SessionEditor } from '../components/SessionEditor'
 import { findExercise } from '../engine/exercises'
+import { overallProgress, type ExerciseChange } from '../engine/overall'
 import { bestE1rm, historyFor } from '../engine/progression'
 import type { Session } from '../engine/types'
 import { kg, sessionsInWeek, setsText, shortDate, weekStart, weekStreak } from '../format'
@@ -19,7 +20,13 @@ export function Progress({ sessions, targetDays }: { sessions: Session[]; target
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id).filter((id) => findExercise(id))
   }, [sessions])
 
+  const overall = useMemo(() => overallProgress(sessions), [sessions])
   const [selected, setSelected] = useState<string | null>(null)
+  const exerciseSection = useRef<HTMLElement>(null)
+  const openExercise = (id: string) => {
+    setSelected(id)
+    exerciseSection.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const [editing, setEditing] = useState<Session | null>(null)
   const [showAll, setShowAll] = useState(false)
   const newestFirst = [...sessions].reverse()
@@ -56,6 +63,8 @@ export function Progress({ sessions, targetDays }: { sessions: Session[]; target
         </div>
       </div>
 
+      <OverallSection overall={overall} onOpen={openExercise} />
+
       <section className="section">
         <div className="section-head">
           <h2 className="h2">Constancia</h2>
@@ -74,7 +83,7 @@ export function Progress({ sessions, targetDays }: { sessions: Session[]; target
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" ref={exerciseSection}>
         <div className="section-head">
           <h2 className="h2">Fuerza por ejercicio</h2>
         </div>
@@ -188,4 +197,107 @@ function weeklyCounts(sessions: Session[], now = new Date()): { label: string; c
     start.setDate(start.getDate() - (WEEKS - 1 - i) * 7)
     return { label: i === WEEKS - 1 ? 'Esta' : `${start.getDate()}/${start.getMonth() + 1}`, count: sessionsInWeek(sessions, start) }
   })
+}
+
+const pct = (change: number) => `${change >= 0 ? '+' : '−'}${Math.abs(Math.round(change * 100))}%`
+
+function OverallSection({ overall, onOpen }: { overall: ReturnType<typeof overallProgress>; onOpen: (id: string) => void }) {
+  const { points, changes, up, flat, down } = overall
+  const last = points[points.length - 1]
+  const total = last ? (last.index - 100) / 100 : 0
+  const data = points.map((p) => ({ week: `${p.week.getDate()}/${p.week.getMonth() + 1}`, index: p.index }))
+  const best = changes.filter((c) => c.change > 0).slice(0, 3)
+  const worst = changes.filter((c) => c.change < -0.02).slice(-3).reverse()
+
+  return (
+    <section className="section">
+      <div className="section-head">
+        <h2 className="h2">Progreso general</h2>
+        <span className="small muted">Todos tus ejercicios</span>
+      </div>
+      {points.length < 2 ? (
+        <div className="empty">Con dos semanas de entrenamiento verás aquí cómo evoluciona tu fuerza en general.</div>
+      ) : (
+        <>
+          <p style={{ margin: 0 }}>
+            <b className="num" style={{ fontSize: '1.6rem', color: total >= 0 ? 'var(--up)' : 'var(--down)' }}>
+              {pct(total)}
+            </b>{' '}
+            <span className="small muted">de fuerza estimada, en promedio, desde que empezaste cada ejercicio</span>
+          </p>
+
+          <div className="chart" style={{ height: 180 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                <CartesianGrid stroke="#2a3456" vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#8d96b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#8d96b8', fontSize: 11 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} width={48} />
+                <ReferenceLine y={100} stroke="#8d96b8" strokeDasharray="4 4" />
+                <Tooltip
+                  contentStyle={{ background: '#1f2843', border: '1px solid #2a3456', borderRadius: 10, fontSize: 13 }}
+                  labelStyle={{ color: '#8d96b8' }}
+                  labelFormatter={(l) => `Semana del ${l}`}
+                  formatter={(v) => [pct((Number(v) - 100) / 100), 'Fuerza general']}
+                />
+                <Line type="monotone" dataKey="index" stroke="#9a8cff" strokeWidth={2.5} dot={{ r: 3, fill: '#9a8cff' }} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="small muted" style={{ margin: '4px 0 0' }}>
+            100 es tu punto de partida en cada ejercicio, así un ejercicio liviano cuenta igual que uno pesado.
+          </p>
+        </>
+      )}
+
+      {changes.length > 0 && (
+        <>
+          <div className="stats">
+            <div className="stat">
+              <b className="num" style={{ color: 'var(--up)' }}>{up}</b>
+              <span>{up === 1 ? 'Ejercicio subió' : 'Ejercicios subieron'}</span>
+            </div>
+            <div className="stat">
+              <b className="num">{flat}</b>
+              <span>{flat === 1 ? 'Se mantuvo' : 'Se mantuvieron'}</span>
+            </div>
+            <div className="stat">
+              <b className="num" style={{ color: down > 0 ? 'var(--down)' : undefined }}>{down}</b>
+              <span>{down === 1 ? 'Bajó' : 'Bajaron'}</span>
+            </div>
+          </div>
+          <ChangeList title="Lo que más subió" items={best} onOpen={onOpen} />
+          <ChangeList
+            title="Para revisar"
+            hint="Puede ser por una pausa, un cambio de técnica o cansancio. Si te molesta algo al hacerlo, consúltalo con un profesional."
+            items={worst}
+            onOpen={onOpen}
+          />
+        </>
+      )}
+    </section>
+  )
+}
+
+function ChangeList({ title, hint, items, onOpen }: { title: string; hint?: string; items: ExerciseChange[]; onOpen: (id: string) => void }) {
+  if (items.length === 0) return null
+  return (
+    <div style={{ marginTop: 16 }}>
+      <p className="small muted" style={{ margin: '0 0 6px' }}>
+        {title}
+      </p>
+      {items.map((c) => (
+        <button className="history-btn" key={c.exerciseId} onClick={() => onOpen(c.exerciseId)}>
+          <span>{findExercise(c.exerciseId)?.name ?? 'Ejercicio'}</span>
+          <span className={`chip ${c.change >= 0 ? 'up' : 'down'}`} style={{ marginTop: 0 }}>
+            {pct(c.change)}
+          </span>
+        </button>
+      ))}
+      {hint && (
+        <p className="small muted" style={{ margin: '6px 0 0' }}>
+          {hint}
+        </p>
+      )}
+    </div>
+  )
 }
