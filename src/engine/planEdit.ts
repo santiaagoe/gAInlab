@@ -10,11 +10,22 @@ function mapDay(plan: Plan, dayId: string, fn: (day: PlanDay) => PlanDay): Plan 
   return { ...plan, edited: true, days: plan.days.map((d) => (d.id === dayId ? fn(d) : d)) }
 }
 
+/** Leaves a superset when one of its two exercises is replaced or removed (the pair was checked as safe). */
+function breakSuperset(exercises: PlanExercise[], index: number): PlanExercise[] {
+  const letter = exercises[index]?.superset
+  if (!letter) return exercises
+  return exercises.map((e) => {
+    if (e.superset !== letter) return e
+    const { superset: _, ...rest } = e
+    return rest
+  })
+}
+
 export function replaceExercise(plan: Plan, dayId: string, index: number, exerciseId: string): Plan {
   const slot = getExercise(exerciseId).slot
   return mapDay(plan, dayId, (d) => ({
     ...d,
-    exercises: d.exercises.map((e, i) => (i === index ? { ...e, exerciseId, slot } : e)),
+    exercises: breakSuperset(d.exercises, index).map((e, i) => (i === index ? { ...e, exerciseId, slot } : e)),
   }))
 }
 
@@ -26,7 +37,7 @@ export function updateExercise(plan: Plan, dayId: string, index: number, patch: 
 }
 
 export function removeExercise(plan: Plan, dayId: string, index: number): Plan {
-  return mapDay(plan, dayId, (d) => ({ ...d, exercises: d.exercises.filter((_, i) => i !== index) }))
+  return mapDay(plan, dayId, (d) => ({ ...d, exercises: breakSuperset(d.exercises, index).filter((_, i) => i !== index) }))
 }
 
 export function addExercise(plan: Plan, dayId: string, exerciseId: string, profile: Profile): Plan {

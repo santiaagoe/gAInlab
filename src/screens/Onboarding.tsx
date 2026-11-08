@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { PlanNoticeCard, type NoticePatch } from '../components/Coverage'
 import { PlanEditor } from '../components/PlanEditor'
 import { AGE_GROUPS, AGE_LABELS } from '../engine/age'
-import { buildPlan } from '../engine/plan'
+import { planNotice } from '../engine/notice'
+import { buildPlan, engineOptions } from '../engine/plan'
 import { emptyDays, emptyPlan } from '../engine/planEdit'
 import type { AgeGroup, Equipment, Experience, Goal, Injury, Plan, Profile, Situation } from '../engine/types'
 import { actions, useApp } from '../store'
@@ -75,7 +77,8 @@ interface Draft {
 }
 
 export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?: () => void }) {
-  const { notes } = useApp()
+  const { notes, settings } = useApp()
+  const cap = engineOptions(settings).capStrengthDays
   const [index, setIndex] = useState(0)
   const [draft, setDraft] = useState<Draft>(initial ? { ...initial } : { injuries: [] })
   const [plan, setPlan] = useState<Plan | null>(null)
@@ -98,7 +101,7 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
         // Regenerate only if the answers that shape the plan changed, so edits survive going back and forth.
         const key = target === 'plan' ? JSON.stringify({ ...p, createdAt: '' }) : `propio-${p.days}`
         if (key !== planKey || !plan) {
-          if (target === 'plan' || !plan?.custom) setPlan(target === 'plan' ? buildPlan(p) : emptyPlan(p.days))
+          if (target === 'plan' || !plan?.custom) setPlan(target === 'plan' ? buildPlan(p, { capStrengthDays: cap }) : emptyPlan(p.days))
           setPlanKey(key)
         }
       }
@@ -115,6 +118,25 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
   }
 
   const back = () => (index === 0 ? onCancel?.() : goTo(index - 1))
+
+  // Reduced or insufficient plan: warning with +1 day / +15 minutes, checked against the plan as edited.
+  const notice = useMemo(
+    () => (step === 'plan' && plan && profile ? planNotice(profile, plan, { capStrengthDays: cap }) : null),
+    // profile is rebuilt on every render; its answers are what matter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [step, plan, cap, JSON.stringify(profile)],
+  )
+
+  /** Applies a suggestion: changes the answer and shows the new plan right away. */
+  const applySuggestion = (patch: NoticePatch) => {
+    const nextDraft = { ...draft, ...patch }
+    const p = profileFrom(nextDraft, initial)
+    if (!p) return
+    setDraft(nextDraft)
+    setPlan(buildPlan(p, { capStrengthDays: cap }))
+    setPlanKey(JSON.stringify({ ...p, createdAt: '' }))
+    window.scrollTo({ top: 0 })
+  }
 
   const missing = plan ? emptyDays(plan) : []
   const start = () => {
@@ -220,11 +242,12 @@ export function Onboarding({ initial, onCancel }: { initial?: Profile; onCancel?
             {plan.name}
           </h1>
           <p className="lede">{plan.summary}</p>
+          {notice && <PlanNoticeCard notice={notice} onApply={applySuggestion} />}
           <div className="note ai" style={{ marginTop: 16 }}>
             Toca cualquier ejercicio para cambiarlo, ajustar series y repeticiones o quitarlo. También puedes añadir ejercicios y días.
           </div>
           {plan.edited && (
-            <button className="link" style={{ marginTop: 12 }} onClick={() => setPlan(buildPlan(profile))}>
+            <button className="link" style={{ marginTop: 12 }} onClick={() => setPlan(buildPlan(profile, { capStrengthDays: cap }))}>
               Volver al plan propuesto
             </button>
           )}

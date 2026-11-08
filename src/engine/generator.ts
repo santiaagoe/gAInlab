@@ -1,7 +1,7 @@
 import { ageSummary } from './age'
 import { belowMinimum, coverageOf, modeOf, ratiosOf, type Coverage, type PlanMode } from './coverage'
 import { sessionMinutes, type TimedExercise } from './duration'
-import { contributions, EXERCISES, isFreeBarbell, MUSCLE_NAMES, MUSCLES } from './exercises'
+import { contributions, EXERCISES, isFreeBarbell, MUSCLES } from './exercises'
 import {
   ANTAGONISTS,
   CORE_SETS,
@@ -913,7 +913,7 @@ const DAY_NAMES: Record<DayKind, string> = {
 }
 
 const GOAL_TEXT: Record<Profile['goal'], string> = {
-  hipertrofia: 'Pensado para ganar músculo: todos los grupos musculares reciben trabajo dos veces por semana.',
+  hipertrofia: 'Pensado para ganar músculo: el volumen de cada grupo muscular se ajusta a tu experiencia.',
   grasa: 'Pensado para mantener la fuerza y el músculo mientras bajas de peso: pesos exigentes en los básicos y volumen moderado.',
   fuerza: 'Pensado para ganar fuerza: los básicos van primero, con menos repeticiones y descansos largos.',
   salud: 'Volumen moderado para entrenar con constancia: cubre todo el cuerpo sin agotarte.',
@@ -936,19 +936,10 @@ function listNames(names: string[]): string {
   return `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`
 }
 
-function summaryFor(ctx: Context, mode: PlanMode, belowMin: Muscle[], missing: Pattern[], restDays: number): string {
+function summaryFor(ctx: Context, missing: Pattern[], restDays: number): string {
   const p = ctx.profile
   const parts = [GOAL_TEXT[p.goal]]
-  if (mode === 'reducido') {
-    parts.push(
-      `Con ${p.days} días de ${p.minutes} minutos armamos una versión reducida: ${listNames(belowMin.map((m) => MUSCLE_NAMES[m]))} quedan bajo el volumen recomendado.`,
-    )
-  }
-  if (mode === 'insuficiente') {
-    parts.push(
-      `Ni la versión mínima cabe en ${p.minutes} minutos: cada sesión dura algo más. Si puedes, suma un día o unos minutos.`,
-    )
-  }
+  // Reduced and insufficient plans are explained by the warning card (src/engine/notice.ts), which follows edits.
   if (restDays > 0) {
     parts.push(
       restDays === 1
@@ -1034,8 +1025,9 @@ export function generatePlan(profile: Profile, options: GenerateOptions = {}): G
   const restDays = ctx.requestedDays - ctx.days
   const plan: Plan = {
     name: ctx.split.name,
-    summary: summaryFor(ctx, mode, belowMin, missingPatterns, restDays),
+    summary: summaryFor(ctx, missingPatterns, restDays),
     days: planDays,
+    engine: { version: 2, mode },
   }
 
   let suggestion: Suggestion | null = null

@@ -1,10 +1,15 @@
 import { generatePlan } from './generator'
-import { contextFor, doseFor } from './targets'
-import type { Exercise, Plan, PlanExercise, Profile, Role } from './types'
+import { contextFor, doseFor, type Options } from './targets'
+import type { Exercise, Plan, PlanExercise, Profile, Role, Settings } from './types'
+
+/** Engine options from the app settings. */
+export function engineOptions(settings?: Pick<Settings, 'capStrengthDays'>): Options {
+  return { capStrengthDays: settings?.capStrengthDays !== false }
+}
 
 /** Plan for a survey, built by the rules engine (src/engine/generator.ts). */
-export function buildPlan(profile: Profile): Plan {
-  return generatePlan(profile).plan
+export function buildPlan(profile: Profile, options: Options = {}): Plan {
+  return generatePlan(profile, options).plan
 }
 
 /** Default sets for an exercise the person adds by hand. */

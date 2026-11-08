@@ -1,11 +1,11 @@
 import { useSyncExternalStore } from 'react'
 import { getExercise, registerCustomExercises } from './engine/exercises'
-import { buildPlan } from './engine/plan'
+import { buildPlan, engineOptions } from './engine/plan'
 import { replaceExercise } from './engine/planEdit'
 import { extendRest, startRest } from './engine/rest'
 import { cleanEdited, prepareExercise, toSession, type TrainingContext } from './engine/session'
-import type { CustomExercise, Feel, Kind, Muscle, Plan, PlanDay, Profile, Session, SetLog, Settings } from './engine/types'
-import { CORRUPT_KEY, initialState, parseState, PREVIOUS_KEY, STORAGE_KEY, type AppState } from './persistence'
+import type { CustomExercise, Feel, Kind, Muscle, Plan, PlanDay, PlanExercise, Profile, Session, SetLog, Settings } from './engine/types'
+import { CORRUPT_KEY, CURRENT_VERSION, initialState, parseState, PRE_V2_KEY, PREVIOUS_KEY, STORAGE_KEY, type AppState } from './persistence'
 
 export type { ActiveExercise, ActiveSession } from './engine/types'
 export type { AppState } from './persistence'
@@ -40,6 +40,13 @@ function writeKey(key: string, value: string): boolean {
 
 /* ---------- Load ---------- */
 
+/** Format version of saved JSON; data without one is from v0.1–0.4 (version 1). */
+function savedVersion(json: unknown): number {
+  if (!json || typeof json !== 'object') return CURRENT_VERSION
+  const v = (json as { version?: unknown }).version
+  return v === undefined ? 1 : typeof v === 'number' ? v : CURRENT_VERSION
+}
+
 function load(): { state: AppState; loadIssue: StoreStatus['loadIssue'] } {
   const raw = readKey(STORAGE_KEY)
   if (!raw) return { state: initialState(), loadIssue: null }
@@ -51,6 +58,8 @@ function load(): { state: AppState; loadIssue: StoreStatus['loadIssue'] } {
     writeKey(CORRUPT_KEY, raw)
     return { state: initialState(), loadIssue: 'corrupt' }
   }
+  // Before the first save in a newer format, keep the old data exactly as it was (only once).
+  if (savedVersion(json) < CURRENT_VERSION && readKey(PRE_V2_KEY) === null) writeKey(PRE_V2_KEY, raw)
   const result = parseState(json)
   if (!result.ok) {
     writeKey(CORRUPT_KEY, raw)
@@ -130,8 +139,18 @@ export type ImportResult = { ok: true; sessions: number } | { ok: false; message
 
 export const actions = {
   /** Saves the survey answers with the plan the user approved (generated, edited or built from scratch). */
-  completeOnboarding(profile: Profile, plan: Plan = buildPlan(profile)) {
+  completeOnboarding(profile: Profile, plan: Plan = buildPlan(profile, engineOptions(state.settings))) {
     set({ ...state, profile, plan, active: undefined })
+  },
+
+  /**
+   * Replaces the plan with a new one from the rules engine, optionally changing days or minutes first.
+   * History, notes and an open session are kept. Only runs when the person asks for it.
+   */
+  regeneratePlan(patch: Partial<Pick<Profile, 'days' | 'minutes'>> = {}) {
+    if (!state.profile) return
+    const profile = { ...state.profile, ...patch }
+    set({ ...state, profile, plan: buildPlan(profile, engineOptions(state.settings)) })
   },
 
   setPlan(plan: Plan) {
@@ -209,8 +228,19 @@ export const actions = {
     if (!active) return
     if (inPlan && state.plan) actions.setPlan(replaceExercise(state.plan, active.dayId, exIndex, exerciseId))
     const ctx = context()
+    // A swapped exercise leaves its superset: the pair was checked as safe only for the original exercises.
+    const letter = active.exercises[exIndex]?.plan.superset
+    const unpair = (plan: PlanExercise): PlanExercise => {
+      if (!letter || plan.superset !== letter) return plan
+      const { superset: _, ...rest } = plan
+      return rest
+    }
     const exercises = active.exercises.map((ex, i) =>
-      i === exIndex ? prepareExercise(ctx, { ...ex.plan, slot: getExercise(exerciseId).slot }, exerciseId) : ex,
+      i === exIndex
+        ? prepareExercise(ctx, { ...unpair(ex.plan), slot: getExercise(exerciseId).slot }, exerciseId)
+        : ex.plan.superset === letter && letter
+          ? { ...ex, plan: unpair(ex.plan) }
+          : ex,
     )
     set({ ...state, active: { ...active, exercises } })
   },

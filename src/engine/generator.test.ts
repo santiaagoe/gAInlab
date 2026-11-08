@@ -63,7 +63,7 @@ describe('modo reducido y sugerencias', () => {
     expect(r.suggestion).toEqual({ addDay: true, addMinutes: true })
     expect(generatePlan(profileOf({ days: 4, minutes: 45 })).mode).toBe('completo')
     expect(generatePlan(profileOf({ days: 3, minutes: 60 })).mode).toBe('completo')
-    expect(r.plan.summary).toMatch(/versión reducida/)
+    expect(r.plan.engine).toEqual({ version: 2, mode: 'reducido' })
   })
 
   it('no sugiere un día más si el tope por experiencia no lo permite, ni pasar de 90 minutos', () => {
@@ -80,7 +80,7 @@ describe('modo reducido y sugerencias', () => {
     const r = generatePlan(profileOf({ days: 2, minutes: 30, age: '70+', experience: 'nuevo' }))
     expect(r.mode).toBe('insuficiente')
     expect(r.days.some((d) => d.minutes > 30)).toBe(true)
-    expect(r.plan.summary).toMatch(/Ni la versión mínima cabe/)
+    expect(r.plan.engine).toEqual({ version: 2, mode: 'insuficiente' })
     expect(validatePlan(r)).toEqual([])
   })
 })

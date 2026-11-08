@@ -1,3 +1,4 @@
+import { expectedFeel } from './engine/rules'
 import type { ExerciseLog, Feel, Kind, PrescriptionMode, Session } from './engine/types'
 import { calendarDaysBetween, kg } from './engine/units'
 
@@ -102,11 +103,21 @@ export function weekStreak(sessions: Session[], target: number, now = new Date()
 }
 
 /** How a set felt, with the hint shown everywhere the user picks it. */
+/** Hints follow the "RIR que el usuario cree" column of table 10a. */
 export const FEEL_OPTIONS: { value: Feel; label: string; hint: string }[] = [
-  { value: 'facil', label: 'Fácil', hint: 'Sobraban 3+' },
-  { value: 'justo', label: 'Justo', hint: 'Sobraban 1–2' },
-  { value: 'limite', label: 'Al límite', hint: 'Ni una más' },
+  { value: 'facil', label: 'Fácil', hint: 'Sobraban 4+' },
+  { value: 'justo', label: 'Justo', hint: 'Sobraban 2–3' },
+  { value: 'limite', label: 'Al límite', hint: 'Sobraban 0–1' },
 ]
+
+/** Effort target of a plan entry (table 3), told through the button the person should end up pressing (10a). */
+export function effortText(rir: number): string {
+  const feel = expectedFeel(rir)
+  const label = FEEL_OPTIONS.find((o) => o.value === feel)!.label
+  if (rir <= 0) return `Puedes llevar la última serie al límite: «${label}».`
+  const reps = rir === 1 ? 'una repetición' : `unas ${rir} repeticiones`
+  return `Termina cada serie con ${reps} de margen: «${label}».`
+}
 
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`

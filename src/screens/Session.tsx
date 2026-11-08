@@ -4,9 +4,9 @@ import { IconCheck, IconFocus, IconList, IconNext, IconPrev, IconSwap } from '..
 import { NumField } from '../components/NumField'
 import { getExercise } from '../engine/exercises'
 import { incrementFor, warmupSets } from '../engine/progression'
-import { canMark, restLabel, restLeft, shouldAlert, shouldAutoMark } from '../engine/rest'
+import { canMark, restLabel, restLeft, shouldAlert, shouldAutoMark, supersetStep } from '../engine/rest'
 import type { AgeGroup, Plan, Profile, RestState, Session, SetLog, Settings } from '../engine/types'
-import { clock, FEEL_OPTIONS, kg, relativeDay, setsText, toneFor, weightUnit } from '../format'
+import { clock, effortText, FEEL_OPTIONS, kg, relativeDay, setsText, toneFor, weightUnit } from '../format'
 import { restOverAlert, unlockAudio } from '../sound'
 import { actions, getState, type ActiveExercise, type ActiveSession } from '../store'
 
@@ -302,6 +302,10 @@ function ExerciseBlock({
 }) {
   const info = getExercise(ex.exerciseId)
   const rx = ex.prescription
+  const partnerEntry = ex.plan.superset
+    ? getState().active?.exercises.find((e, i) => i !== index && e.plan.superset === ex.plan.superset)
+    : undefined
+  const partnerName = partnerEntry ? getExercise(partnerEntry.exerciseId).name : null
   const tone = toneFor(rx.mode)
   const bodyweight = info.kind === 'corporal'
   const unit = weightUnit(info.kind)
@@ -326,6 +330,14 @@ function ExerciseBlock({
   const mark = (current: ActiveExercise, setIndex: number) => {
     unlockAudio()
     if (invalid === setIndex) setInvalid(null)
+    const all = getState().active?.exercises ?? []
+    const step = supersetStep(all, index, setIndex, (i) => getExercise(all[i].exerciseId).name)
+    if (step) {
+      actions.completeSet(index, setIndex, step.rest, step.label)
+      // One exercise at a time: take the person straight to the other half of the superset.
+      if (step.switchNow && settings.sessionView === 'enfoque') actions.setCurrent(step.partner)
+      return
+    }
     actions.completeSet(index, setIndex, current.plan.rest, restLabel(current, setIndex, nextName !== null))
   }
 
@@ -360,6 +372,12 @@ function ExerciseBlock({
             {ex.plan.sets} series de {ex.plan.repMin}–{ex.plan.repMax} reps,{' '}
             <span style={{ whiteSpace: 'nowrap' }}>descanso {clock(ex.plan.rest)}</span>
           </div>
+          {ex.plan.rir !== undefined && <div className="small muted">{effortText(ex.plan.rir)}</div>}
+          {partnerName && (
+            <div className="superset-tag">
+              Superserie con {partnerName}: alterna una serie de cada uno y descansa al terminar el par.
+            </div>
+          )}
         </div>
         <button className="ex-swap" onClick={onSwap}>
           <IconSwap style={{ verticalAlign: '-3px', marginRight: 4 }} />

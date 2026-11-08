@@ -96,6 +96,11 @@ export function PlanEditor({ plan, profile, notes, onChange }: Props) {
                       <span className="edit-hint">Editar</span>
                     </span>
                     <span className="num">
+                      {e.superset && (
+                        <span className="superset-mark" aria-label={`Superserie ${e.superset}`}>
+                          {e.superset}
+                        </span>
+                      )}
                       {e.sets} × {e.repMin}–{e.repMax}
                     </span>
                   </button>

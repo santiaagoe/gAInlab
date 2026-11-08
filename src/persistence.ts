@@ -36,8 +36,10 @@ export const STORAGE_KEY = 'gainlab:v1'
 export const PREVIOUS_KEY = 'gainlab:v1:prev'
 /** Raw saved data that could not be read in full, kept so nothing is lost. */
 export const CORRUPT_KEY = 'gainlab:v1:corrupt'
+/** Copy of the data exactly as it was before the first migration to version 2 (v0.5), never overwritten. */
+export const PRE_V2_KEY = 'gainlab:v1:pre-v2'
 
-export const CURRENT_VERSION = 1
+export const CURRENT_VERSION = 2
 
 export interface AppState {
   version: number
@@ -65,7 +67,20 @@ type Raw = Record<string, unknown>
  * When the format changes: bump CURRENT_VERSION, add the step here and a test for it.
  */
 export type Migration = (data: Raw) => Raw
-export const MIGRATIONS: Record<number, Migration> = {}
+export const MIGRATIONS: Record<number, Migration> = {
+  /**
+   * v0.5, rules engine: "hombro" was split into three deltoid heads and core was added. The user's own exercises
+   * saved with "hombro" become lateral deltoid; everything else (profile, plan, history, notes) keeps its format,
+   * and plans made before keep working without the new optional fields (rir, superset).
+   */
+  1: (data) => {
+    if (!Array.isArray(data.customExercises)) return data
+    const customExercises = data.customExercises.map((c: unknown) =>
+      isObj(c) && c.muscle === 'hombro' ? { ...c, muscle: 'deltLateral' } : c,
+    )
+    return { ...data, customExercises }
+  },
+}
 
 export class StateError extends Error {}
 
@@ -266,6 +281,9 @@ function parsePlan(v: unknown, report: Report): Plan | null {
   const plan: Plan = { name: v.name, summary: isStr(v.summary) ? v.summary : '', days }
   if (v.edited === true) plan.edited = true
   if (v.custom === true) plan.custom = true
+  if (isObj(v.engine) && v.engine.version === 2 && ['completo', 'reducido', 'insuficiente'].includes(v.engine.mode as string)) {
+    plan.engine = { version: 2, mode: v.engine.mode as 'completo' | 'reducido' | 'insuficiente' }
+  }
   return plan
 }
 

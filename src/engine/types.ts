@@ -132,6 +132,8 @@ export interface Plan {
   edited?: boolean
   /** Built by the user from scratch ("Ya tengo un plan"). */
   custom?: boolean
+  /** Made by the rules engine (v0.5+). Plans made before have no mark and never show warnings on their own. */
+  engine?: { version: 2; mode: 'completo' | 'reducido' | 'insuficiente' }
 }
 
 export interface SetLog {

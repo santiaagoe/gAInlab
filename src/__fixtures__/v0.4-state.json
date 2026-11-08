@@ -1,0 +1,1714 @@
+{
+ "version": 1,
+ "sessions": [
+  {
+   "id": "gies3lkpmuvk1mo0",
+   "date": "2026-10-05T18:00:00.000Z",
+   "dayId": "d1",
+   "dayName": "Torso A",
+   "exercises": [
+    {
+     "exerciseId": "banca-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "remo-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "militar-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 30,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "jalon",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 35,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "elevaciones-laterales",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "custom-000d58avmuvk1mo0",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 45,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 45,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 45,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "j6gsdjljmuyexc00",
+   "date": "2026-10-07T18:00:00.000Z",
+   "dayId": "d2",
+   "dayName": "Pierna A",
+   "exercises": [
+    {
+     "exerciseId": "prensa",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "rumano-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "step-up",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 30,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "extension-cuadriceps",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 35,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "gemelo-maquina",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "7vrrcp3qmv19t1c0",
+   "date": "2026-10-09T18:00:00.000Z",
+   "dayId": "d3",
+   "dayName": "Torso B",
+   "exercises": [
+    {
+     "exerciseId": "militar-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "jalon",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "banca-mancuernas",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 30,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "remo-polea",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 35,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "aperturas-maquina",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "1oyww1kvmv44oqo0",
+   "date": "2026-10-11T18:00:00.000Z",
+   "dayId": "d4",
+   "dayName": "Pierna B",
+   "exercises": [
+    {
+     "exerciseId": "rumano-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 20,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "goblet",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 25,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "curl-femoral",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 30,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 30,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "step-up",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 35,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 35,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "gemelo-maquina",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 40,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "oft41g7nmv6zkg00",
+   "date": "2026-10-13T18:00:00.000Z",
+   "dayId": "d1",
+   "dayName": "Torso A",
+   "exercises": [
+    {
+     "exerciseId": "banca-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "remo-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "militar-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 32.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "jalon",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 37.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "elevaciones-laterales",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "custom-000d58avmuvk1mo0",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 47.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 47.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 47.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ogd9414smv9ug5c0",
+   "date": "2026-10-15T18:00:00.000Z",
+   "dayId": "d2",
+   "dayName": "Pierna A",
+   "exercises": [
+    {
+     "exerciseId": "prensa",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "rumano-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "step-up",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 32.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "extension-cuadriceps",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 37.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "gemelo-maquina",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "xnd155gvmvcpbuo0",
+   "date": "2026-10-17T18:00:00.000Z",
+   "dayId": "d3",
+   "dayName": "Torso B",
+   "exercises": [
+    {
+     "exerciseId": "militar-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "jalon",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "banca-mancuernas",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 32.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "remo-polea",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 37.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "aperturas-maquina",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "dt0o843kmvfk7k00",
+   "date": "2026-10-19T18:00:00.000Z",
+   "dayId": "d4",
+   "dayName": "Pierna B",
+   "exercises": [
+    {
+     "exerciseId": "rumano-barra",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 22.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "goblet",
+     "repMin": 8,
+     "repMax": 12,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      },
+      {
+       "weight": 27.5,
+       "reps": 9,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "curl-femoral",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 32.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 32.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "step-up",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "limite",
+     "sets": [
+      {
+       "weight": 37.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 37.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    },
+    {
+     "exerciseId": "gemelo-maquina",
+     "repMin": 10,
+     "repMax": 15,
+     "feel": "justo",
+     "sets": [
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      },
+      {
+       "weight": 42.5,
+       "reps": 11,
+       "done": true
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "settings": {
+  "incBarra": 2.5,
+  "incMancuerna": 1,
+  "incMaquina": 2.5,
+  "sessionView": "lista"
+ },
+ "notes": {
+  "banca-barra": "agarre medio, banco en 3"
+ },
+ "customExercises": [
+  {
+   "id": "custom-000d58avmuvk1mo0",
+   "name": "Press Arnold",
+   "kind": "mancuerna",
+   "muscle": "hombro",
+   "compound": true
+  },
+  {
+   "id": "custom-4qh0z1qvmuvk1mo0",
+   "name": "Elevación Y en banco",
+   "kind": "mancuerna",
+   "muscle": "hombro",
+   "compound": false
+  },
+  {
+   "id": "custom-r79isecamuvk1mo0",
+   "name": "Remo Meadows",
+   "kind": "barra",
+   "muscle": "espalda",
+   "compound": true
+  }
+ ],
+ "profile": {
+  "goal": "hipertrofia",
+  "age": "40-49",
+  "experience": "menos1",
+  "situation": "entreno",
+  "days": 4,
+  "minutes": 60,
+  "equipment": "gimnasio",
+  "injuries": [
+   "rodilla"
+  ],
+  "createdAt": "2026-10-05T17:00:00.000Z"
+ },
+ "plan": {
+  "name": "Torso y pierna, 4 días",
+  "summary": "Enfocado en ganar músculo: series de 8 a 12 repeticiones en los ejercicios principales y más volumen en los accesorios. Evitamos los ejercicios que suelen cargar las zonas donde tienes molestias. Sumamos algo más de descanso entre series en los ejercicios principales.",
+  "days": [
+   {
+    "id": "d1",
+    "name": "Torso A",
+    "focus": "Press banca y remo",
+    "exercises": [
+     {
+      "exerciseId": "banca-barra",
+      "slot": "pressHorizontal",
+      "role": "principal",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 165
+     },
+     {
+      "exerciseId": "remo-barra",
+      "slot": "remo",
+      "role": "principal",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 165
+     },
+     {
+      "exerciseId": "militar-barra",
+      "slot": "pressVertical",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     },
+     {
+      "exerciseId": "jalon",
+      "slot": "jalon",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     },
+     {
+      "exerciseId": "elevaciones-laterales",
+      "slot": "lateral",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     },
+     {
+      "exerciseId": "custom-000d58avmuvk1mo0",
+      "slot": "lateral",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     }
+    ]
+   },
+   {
+    "id": "d2",
+    "name": "Pierna A",
+    "focus": "Sentadilla",
+    "exercises": [
+     {
+      "exerciseId": "prensa",
+      "slot": "sentadilla",
+      "role": "principal",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 165
+     },
+     {
+      "exerciseId": "rumano-barra",
+      "slot": "bisagra",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     },
+     {
+      "exerciseId": "step-up",
+      "slot": "unilateral",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     },
+     {
+      "exerciseId": "extension-cuadriceps",
+      "slot": "cuadriceps",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     },
+     {
+      "exerciseId": "gemelo-maquina",
+      "slot": "gemelo",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     }
+    ]
+   },
+   {
+    "id": "d3",
+    "name": "Torso B",
+    "focus": "Press de hombro y jalón",
+    "exercises": [
+     {
+      "exerciseId": "militar-barra",
+      "slot": "pressVertical",
+      "role": "principal",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 165
+     },
+     {
+      "exerciseId": "jalon",
+      "slot": "jalon",
+      "role": "principal",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 165
+     },
+     {
+      "exerciseId": "banca-mancuernas",
+      "slot": "pressHorizontal",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     },
+     {
+      "exerciseId": "remo-polea",
+      "slot": "remo",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     },
+     {
+      "exerciseId": "aperturas-maquina",
+      "slot": "pecho",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     }
+    ]
+   },
+   {
+    "id": "d4",
+    "name": "Pierna B",
+    "focus": "Bisagra de cadera",
+    "exercises": [
+     {
+      "exerciseId": "rumano-barra",
+      "slot": "bisagra",
+      "role": "principal",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 165
+     },
+     {
+      "exerciseId": "goblet",
+      "slot": "sentadilla",
+      "role": "secundario",
+      "sets": 3,
+      "repMin": 8,
+      "repMax": 12,
+      "rest": 135
+     },
+     {
+      "exerciseId": "curl-femoral",
+      "slot": "femoral",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     },
+     {
+      "exerciseId": "step-up",
+      "slot": "unilateral",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     },
+     {
+      "exerciseId": "gemelo-maquina",
+      "slot": "gemelo",
+      "role": "accesorio",
+      "sets": 3,
+      "repMin": 10,
+      "repMax": 15,
+      "rest": 75
+     }
+    ]
+   }
+  ],
+  "edited": true
+ },
+ "active": {
+  "id": "ip5w1rqvmvif39c0",
+  "startedAt": "2026-10-21T18:00:00.000Z",
+  "dayId": "d1",
+  "dayName": "Torso A",
+  "exercises": [
+   {
+    "plan": {
+     "exerciseId": "banca-barra",
+     "slot": "pressHorizontal",
+     "role": "principal",
+     "sets": 3,
+     "repMin": 8,
+     "repMax": 12,
+     "rest": 165
+    },
+    "exerciseId": "banca-barra",
+    "prescription": {
+     "last": {
+      "date": "2026-10-13T18:00:00.000Z",
+      "log": {
+       "exerciseId": "banca-barra",
+       "repMin": 8,
+       "repMax": 12,
+       "feel": "limite",
+       "sets": [
+        {
+         "weight": 22.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 22.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 22.5,
+         "reps": 9,
+         "done": true
+        }
+       ]
+      }
+     },
+     "mode": "mantener",
+     "weight": 22.5,
+     "reps": [
+      9,
+      9,
+      9
+     ],
+     "delta": 0,
+     "note": "Lo hiciste al límite: mismo peso y consolida las mismas repeticiones."
+    },
+    "sets": [
+     {
+      "weight": 60,
+      "reps": 9,
+      "done": true
+     },
+     {
+      "weight": 22.5,
+      "reps": 9,
+      "done": false
+     },
+     {
+      "weight": 22.5,
+      "reps": 9,
+      "done": false
+     }
+    ]
+   },
+   {
+    "plan": {
+     "exerciseId": "remo-barra",
+     "slot": "remo",
+     "role": "principal",
+     "sets": 3,
+     "repMin": 8,
+     "repMax": 12,
+     "rest": 165
+    },
+    "exerciseId": "remo-barra",
+    "prescription": {
+     "last": {
+      "date": "2026-10-13T18:00:00.000Z",
+      "log": {
+       "exerciseId": "remo-barra",
+       "repMin": 8,
+       "repMax": 12,
+       "feel": "justo",
+       "sets": [
+        {
+         "weight": 27.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 27.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 27.5,
+         "reps": 9,
+         "done": true
+        }
+       ]
+      }
+     },
+     "mode": "mantener",
+     "weight": 27.5,
+     "reps": [
+      10,
+      10,
+      10
+     ],
+     "delta": 0,
+     "note": "Mismo peso: suma una repetición por serie."
+    },
+    "sets": [
+     {
+      "weight": 27.5,
+      "reps": 10,
+      "done": false
+     },
+     {
+      "weight": 27.5,
+      "reps": 10,
+      "done": false
+     },
+     {
+      "weight": 27.5,
+      "reps": 10,
+      "done": false
+     }
+    ]
+   },
+   {
+    "plan": {
+     "exerciseId": "militar-barra",
+     "slot": "pressVertical",
+     "role": "secundario",
+     "sets": 3,
+     "repMin": 8,
+     "repMax": 12,
+     "rest": 135
+    },
+    "exerciseId": "militar-barra",
+    "prescription": {
+     "last": {
+      "date": "2026-10-17T18:00:00.000Z",
+      "log": {
+       "exerciseId": "militar-barra",
+       "repMin": 8,
+       "repMax": 12,
+       "feel": "limite",
+       "sets": [
+        {
+         "weight": 22.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 22.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 22.5,
+         "reps": 9,
+         "done": true
+        }
+       ]
+      }
+     },
+     "mode": "mantener",
+     "weight": 22.5,
+     "reps": [
+      9,
+      9,
+      9
+     ],
+     "delta": 0,
+     "note": "Lo hiciste al límite: mismo peso y consolida las mismas repeticiones."
+    },
+    "sets": [
+     {
+      "weight": 22.5,
+      "reps": 9,
+      "done": false
+     },
+     {
+      "weight": 22.5,
+      "reps": 9,
+      "done": false
+     },
+     {
+      "weight": 22.5,
+      "reps": 9,
+      "done": false
+     }
+    ]
+   },
+   {
+    "plan": {
+     "exerciseId": "jalon",
+     "slot": "jalon",
+     "role": "secundario",
+     "sets": 3,
+     "repMin": 8,
+     "repMax": 12,
+     "rest": 135
+    },
+    "exerciseId": "jalon",
+    "prescription": {
+     "last": {
+      "date": "2026-10-17T18:00:00.000Z",
+      "log": {
+       "exerciseId": "jalon",
+       "repMin": 8,
+       "repMax": 12,
+       "feel": "justo",
+       "sets": [
+        {
+         "weight": 27.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 27.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 27.5,
+         "reps": 9,
+         "done": true
+        }
+       ]
+      }
+     },
+     "mode": "mantener",
+     "weight": 27.5,
+     "reps": [
+      10,
+      10,
+      10
+     ],
+     "delta": 0,
+     "note": "Mismo peso: suma una repetición por serie."
+    },
+    "sets": [
+     {
+      "weight": 27.5,
+      "reps": 10,
+      "done": false
+     },
+     {
+      "weight": 27.5,
+      "reps": 10,
+      "done": false
+     },
+     {
+      "weight": 27.5,
+      "reps": 10,
+      "done": false
+     }
+    ]
+   },
+   {
+    "plan": {
+     "exerciseId": "elevaciones-laterales",
+     "slot": "lateral",
+     "role": "accesorio",
+     "sets": 3,
+     "repMin": 10,
+     "repMax": 15,
+     "rest": 75
+    },
+    "exerciseId": "elevaciones-laterales",
+    "prescription": {
+     "last": {
+      "date": "2026-10-13T18:00:00.000Z",
+      "log": {
+       "exerciseId": "elevaciones-laterales",
+       "repMin": 10,
+       "repMax": 15,
+       "feel": "justo",
+       "sets": [
+        {
+         "weight": 42.5,
+         "reps": 11,
+         "done": true
+        },
+        {
+         "weight": 42.5,
+         "reps": 11,
+         "done": true
+        },
+        {
+         "weight": 42.5,
+         "reps": 11,
+         "done": true
+        }
+       ]
+      }
+     },
+     "mode": "mantener",
+     "weight": 42.5,
+     "reps": [
+      12,
+      12,
+      12
+     ],
+     "delta": 0,
+     "note": "Mismo peso: suma una repetición por serie."
+    },
+    "sets": [
+     {
+      "weight": 42.5,
+      "reps": 12,
+      "done": false
+     },
+     {
+      "weight": 42.5,
+      "reps": 12,
+      "done": false
+     },
+     {
+      "weight": 42.5,
+      "reps": 12,
+      "done": false
+     }
+    ]
+   },
+   {
+    "plan": {
+     "exerciseId": "custom-000d58avmuvk1mo0",
+     "slot": "lateral",
+     "role": "secundario",
+     "sets": 3,
+     "repMin": 8,
+     "repMax": 12,
+     "rest": 135
+    },
+    "exerciseId": "custom-000d58avmuvk1mo0",
+    "prescription": {
+     "last": {
+      "date": "2026-10-13T18:00:00.000Z",
+      "log": {
+       "exerciseId": "custom-000d58avmuvk1mo0",
+       "repMin": 8,
+       "repMax": 12,
+       "feel": "justo",
+       "sets": [
+        {
+         "weight": 47.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 47.5,
+         "reps": 9,
+         "done": true
+        },
+        {
+         "weight": 47.5,
+         "reps": 9,
+         "done": true
+        }
+       ]
+      }
+     },
+     "mode": "mantener",
+     "weight": 47.5,
+     "reps": [
+      10,
+      10,
+      10
+     ],
+     "delta": 0,
+     "note": "Mismo peso: suma una repetición por serie."
+    },
+    "sets": [
+     {
+      "weight": 47.5,
+      "reps": 10,
+      "done": false
+     },
+     {
+      "weight": 47.5,
+      "reps": 10,
+      "done": false
+     },
+     {
+      "weight": 47.5,
+      "reps": 10,
+      "done": false
+     }
+    ]
+   }
+  ],
+  "current": 0,
+  "rest": {
+   "endsAt": 1792605720000,
+   "total": 120,
+   "label": "Descanso, faltan 2 series"
+  }
+ }
+}

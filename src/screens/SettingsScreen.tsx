@@ -1,7 +1,10 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { AgePicker } from '../components/AgePicker'
+import { CoverageSheet, PlanNoticeCard, type NoticePatch } from '../components/Coverage'
 import { PlanEditor } from '../components/PlanEditor'
 import { ageSummary } from '../engine/age'
+import { planNotice } from '../engine/notice'
+import { engineOptions } from '../engine/plan'
 import type { Plan, Profile, Settings } from '../engine/types'
 import { backupName, downloadText } from '../download'
 import { kg, plural } from '../format'
@@ -28,6 +31,20 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
   const [confirmReset, setConfirmReset] = useState(false)
 
   const [canUndo, setCanUndo] = useState(false)
+  const [review, setReview] = useState(false)
+  /** A suggestion (+1 day / +15 min) waiting for confirmation because the plan was edited by hand. */
+  const [pending, setPending] = useState<NoticePatch | null>(null)
+  const cap = engineOptions(settings).capStrengthDays
+  const notice = useMemo(() => planNotice(profile, plan, { capStrengthDays: cap }), [profile, plan, cap])
+
+  const applySuggestion = (patch: NoticePatch) => {
+    if (plan.edited) {
+      setPending(patch)
+      return
+    }
+    actions.regeneratePlan(patch)
+    setMessage('Plan actualizado. Tu historial se mantiene.')
+  }
 
   const download = () => {
     downloadText(exportData(), backupName())
@@ -96,6 +113,35 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
         </div>
         <p style={{ margin: 0, fontWeight: 600 }}>{plan.name}</p>
         <p className="lede small">{plan.summary}</p>
+        {notice && !pending && <PlanNoticeCard notice={notice} onApply={applySuggestion} />}
+        {pending && (
+          <div className="coverage-card" role="alertdialog" aria-label="Confirmar plan nuevo">
+            <p className="coverage-body" style={{ marginTop: 0 }}>
+              {pending.days
+                ? `Se arma una rutina nueva de ${pending.days} días`
+                : `Se arma una rutina nueva con sesiones de ${pending.minutes} minutos`}{' '}
+              y se pierden los cambios que le hiciste. Tu historial se mantiene.
+            </p>
+            <div className="coverage-actions">
+              <button
+                className="btn btn-primary btn-block"
+                onClick={() => {
+                  actions.regeneratePlan(pending)
+                  setPending(null)
+                  setMessage('Plan actualizado. Tu historial se mantiene.')
+                }}
+              >
+                Usar la rutina nueva
+              </button>
+              <button className="btn btn-ghost btn-block" onClick={() => setPending(null)}>
+                Mantener mi rutina
+              </button>
+            </div>
+          </div>
+        )}
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => setReview(true)}>
+          Revisar cobertura
+        </button>
         <div style={{ marginTop: 12 }}>
           <PlanEditor plan={plan} profile={profile} notes={notes} onChange={actions.setPlan} />
         </div>
@@ -119,6 +165,20 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
           </div>
         )}
       </section>
+
+      {review && (
+        <CoverageSheet
+          plan={plan}
+          profile={profile}
+          settings={settings}
+          onClose={() => setReview(false)}
+          onRegenerate={() => {
+            actions.regeneratePlan()
+            setReview(false)
+            setMessage('Plan actualizado. Tu historial se mantiene.')
+          }}
+        />
+      )}
 
       <section className="section">
         <h2 className="h2">Tu edad</h2>
@@ -151,6 +211,27 @@ export function SettingsScreen({ plan, profile, settings, notes, onRedoSurvey }:
               onClick={() => actions.updateSettings({ ...settings, sessionView: 'lista' })}
             >
               Lista
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <h2 className="h2">Al armar un plan</h2>
+        <div className="row">
+          <div>
+            <div style={{ fontWeight: 600 }}>Días de fuerza según experiencia</div>
+            <div className="small muted">
+              Hasta 3 días si empiezas, 4 con menos de un año y 5 con más. Los días que sobran son para descansar o cardio. Se aplica
+              al próximo plan.
+            </div>
+          </div>
+          <div className="seg" role="group" aria-label="Días de fuerza según experiencia">
+            <button aria-pressed={cap} onClick={() => actions.updateSettings({ ...settings, capStrengthDays: true })}>
+              Limitar
+            </button>
+            <button aria-pressed={!cap} onClick={() => actions.updateSettings({ ...settings, capStrengthDays: false })}>
+              Todos
             </button>
           </div>
         </div>

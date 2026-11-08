@@ -51,3 +51,36 @@ export function shouldAutoMark(ex: ActiveExercise, setIndex: number, repsChanged
   if (ex.sets.findIndex((s) => !s.done) !== setIndex) return false
   return canMark(set.weight, set.reps, bodyweight)
 }
+
+/** Seconds to change station between the two exercises of a superset. */
+export const SUPERSET_SWITCH = 15
+
+export interface SupersetStep {
+  /** Index of the other exercise of the pair. */
+  partner: number
+  /** True: go to the partner now with a short switch; false: the round is done, normal rest. */
+  switchNow: boolean
+  rest: number
+  label: string
+}
+
+/**
+ * Supersets (table 8b): one set of each exercise in turn, resting only after each round. Called after marking
+ * `setIndex` of `exercises[index]`; returns null when the exercise is not in a superset or its partner is done.
+ */
+export function supersetStep(exercises: ActiveExercise[], index: number, setIndex: number, partnerName: (i: number) => string): SupersetStep | null {
+  const ex = exercises[index]
+  const letter = ex?.plan.superset
+  if (!letter) return null
+  const partner = exercises.findIndex((e, i) => i !== index && e.plan.superset === letter)
+  if (partner < 0) return null
+  const other = exercises[partner]
+  const pending = other.sets.filter((s) => !s.done).length
+  if (pending === 0) return null
+  const doneHere = ex.sets.filter((s, j) => s.done || j === setIndex).length
+  const doneThere = other.sets.length - pending
+  if (doneThere < doneHere) {
+    return { partner, switchNow: true, rest: SUPERSET_SWITCH, label: `Ahora: ${partnerName(partner)}` }
+  }
+  return { partner, switchNow: false, rest: ex.plan.rest, label: 'Descanso entre rondas' }
+}
