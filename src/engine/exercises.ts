@@ -1,102 +1,126 @@
-import type { CustomExercise, Equipment, Exercise, Injury, Muscle, Slot } from './types'
+import type { CustomExercise, Equipment, Exercise, Injury, Muscle, Pattern, Slot } from './types'
 
 const ALL: Equipment[] = ['gimnasio', 'basico', 'casa']
+/** Barbells, dumbbells, bench and pull-up bar. */
 const BAR: Equipment[] = ['gimnasio', 'basico']
+/** Machines and cables. */
 const GYM: Equipment[] = ['gimnasio']
 
-// Ordered by preference inside each slot: the first available option is the default.
+// Ordered by preference inside each pattern: the generator takes the first one that fits the person.
+// `avoid` marks exercises that usually load a sore area; the generator never picks them for that person.
 export const EXERCISES: Exercise[] = [
-  // Sentadilla
-  { id: 'sentadilla-barra', name: 'Sentadilla con barra', slot: 'sentadilla', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda', 'rodilla'] },
-  { id: 'prensa', name: 'Prensa de piernas', slot: 'sentadilla', kind: 'maquina', equip: GYM, compound: true },
-  { id: 'hack', name: 'Sentadilla hack', slot: 'sentadilla', kind: 'maquina', equip: GYM, compound: true, avoid: ['rodilla'] },
-  { id: 'goblet', name: 'Sentadilla goblet', slot: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true },
-  { id: 'goblet-cajon', name: 'Sentadilla goblet a cajón', slot: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true },
+  // Sentadilla y prensa (cuádriceps 1, glúteos 0,5)
+  { id: 'sentadilla-barra', name: 'Sentadilla con barra', slot: 'sentadilla', pattern: 'sentadilla', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda', 'rodilla'] },
+  { id: 'prensa', name: 'Prensa de piernas', slot: 'sentadilla', pattern: 'sentadilla', kind: 'maquina', equip: GYM, compound: true },
+  { id: 'hack', name: 'Sentadilla hack', slot: 'sentadilla', pattern: 'sentadilla', kind: 'maquina', equip: GYM, compound: true, avoid: ['rodilla'] },
+  { id: 'goblet', name: 'Sentadilla goblet', slot: 'sentadilla', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'goblet-cajon', name: 'Sentadilla goblet a cajón', slot: 'sentadilla', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'goblet-pausa', name: 'Sentadilla goblet con pausa', slot: 'sentadilla', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['rodilla'] },
+  { id: 'bulgara', name: 'Sentadilla búlgara', slot: 'unilateral', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true, avoid: ['rodilla'] },
+  { id: 'zancadas', name: 'Zancadas caminando', slot: 'unilateral', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true, avoid: ['rodilla'] },
+  { id: 'step-up', name: 'Subida al cajón', slot: 'unilateral', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true },
+  { id: 'step-up-bajo', name: 'Subida al cajón bajo', slot: 'unilateral', pattern: 'sentadilla', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true },
 
-  // Bisagra de cadera
-  { id: 'rumano-barra', name: 'Peso muerto rumano con barra', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
-  { id: 'hip-thrust-barra', name: 'Hip thrust con barra', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true, muscles: ['gluteo', 'femoral'] },
-  { id: 'rumano-mancuernas', name: 'Peso muerto rumano con mancuernas', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['espalda'] },
-  { id: 'hip-thrust-mancuerna', name: 'Hip thrust con mancuerna', slot: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, muscles: ['gluteo', 'femoral'] },
+  // Bisagra de cadera (femorales 1, glúteos 0,5)
+  { id: 'rumano-barra', name: 'Peso muerto rumano con barra', slot: 'bisagra', pattern: 'bisagra', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
+  { id: 'rumano-mancuernas', name: 'Peso muerto rumano con mancuernas', slot: 'bisagra', pattern: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['espalda'] },
+  { id: 'pull-through', name: 'Pull-through en polea', slot: 'bisagra', pattern: 'bisagra', kind: 'maquina', equip: GYM, compound: true },
+  { id: 'peso-muerto', name: 'Peso muerto convencional', slot: 'bisagra', pattern: 'bisagra', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
+  { id: 'rumano-una-pierna', name: 'Peso muerto a una pierna', slot: 'bisagra', pattern: 'bisagra', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true, avoid: ['espalda'] },
 
-  { id: 'peso-muerto', name: 'Peso muerto convencional', slot: 'bisagra', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'], muscles: ['femoral', 'gluteo', 'espalda'] },
+  // Hip thrust y puente (glúteos 1; no cuenta como bisagra)
+  { id: 'hip-thrust-mancuerna', name: 'Hip thrust con mancuerna', slot: 'gluteo', pattern: 'hipThrust', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'hip-thrust-barra', name: 'Hip thrust con barra', slot: 'gluteo', pattern: 'hipThrust', kind: 'barra', equip: BAR, compound: true },
+  { id: 'puente-una-pierna', name: 'Puente de glúteo a una pierna', slot: 'gluteo', pattern: 'hipThrust', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true },
 
-  // Press horizontal
-  { id: 'banca-barra', name: 'Press banca con barra', slot: 'pressHorizontal', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
-  { id: 'banca-mancuernas', name: 'Press banca con mancuernas', slot: 'pressHorizontal', kind: 'mancuerna', equip: ALL, compound: true },
-  { id: 'press-pecho-maquina', name: 'Press de pecho en máquina', slot: 'pressHorizontal', kind: 'maquina', equip: GYM, compound: true },
-  { id: 'inclinado-mancuernas', name: 'Press inclinado con mancuernas', slot: 'pressHorizontal', kind: 'mancuerna', equip: ALL, compound: true },
-  { id: 'inclinado-barra', name: 'Press inclinado con barra', slot: 'pressHorizontal', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
-  { id: 'flexiones', name: 'Flexiones', slot: 'pressHorizontal', kind: 'corporal', equip: ALL, compound: true },
+  // Empuje horizontal (pecho 1, tríceps y deltoides anterior 0,5)
+  { id: 'banca-barra', name: 'Press banca con barra', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
+  { id: 'banca-mancuernas', name: 'Press banca con mancuernas', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'press-pecho-maquina', name: 'Press de pecho en máquina', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'maquina', equip: GYM, compound: true },
+  { id: 'inclinado-mancuernas', name: 'Press inclinado con mancuernas', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'inclinado-barra', name: 'Press inclinado con barra', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro'] },
+  { id: 'flexiones', name: 'Flexiones', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'corporal', equip: ALL, compound: true },
+  { id: 'fondos', name: 'Fondos en paralelas', slot: 'pressHorizontal', pattern: 'empujeH', kind: 'corporal', equip: BAR, compound: true, avoid: ['hombro'] },
 
-  // Press vertical
-  { id: 'militar-barra', name: 'Press militar con barra', slot: 'pressVertical', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro', 'espalda'] },
-  { id: 'press-hombro-mancuernas', name: 'Press de hombro con mancuernas', slot: 'pressVertical', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['hombro'] },
-  { id: 'press-hombro-maquina', name: 'Press de hombro en máquina', slot: 'pressVertical', kind: 'maquina', equip: GYM, compound: true, avoid: ['hombro'] },
-  { id: 'landmine', name: 'Press landmine', slot: 'pressVertical', kind: 'barra', equip: BAR, compound: true },
-  { id: 'lateral-sustituto', name: 'Elevaciones laterales con mancuernas', slot: 'pressVertical', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['hombro'] },
+  // Empuje vertical (deltoides anterior 1, tríceps y deltoides lateral 0,5)
+  { id: 'militar-barra', name: 'Press militar con barra', slot: 'pressVertical', pattern: 'empujeV', kind: 'barra', equip: BAR, compound: true, avoid: ['hombro', 'espalda'] },
+  { id: 'press-hombro-mancuernas', name: 'Press de hombro con mancuernas', slot: 'pressVertical', pattern: 'empujeV', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['hombro'] },
+  { id: 'press-hombro-maquina', name: 'Press de hombro en máquina', slot: 'pressVertical', pattern: 'empujeV', kind: 'maquina', equip: GYM, compound: true, avoid: ['hombro'] },
+  { id: 'landmine', name: 'Press landmine', slot: 'pressVertical', pattern: 'empujeV', kind: 'barra', equip: BAR, compound: true },
 
-  // Remo
-  { id: 'remo-barra', name: 'Remo con barra', slot: 'remo', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
-  { id: 'remo-polea', name: 'Remo en polea baja', slot: 'remo', kind: 'maquina', equip: GYM, compound: true },
-  { id: 'remo-mancuerna', name: 'Remo con mancuerna a una mano', slot: 'remo', kind: 'mancuerna', equip: ALL, compound: true },
-  { id: 'remo-t', name: 'Remo en barra T', slot: 'remo', kind: 'barra', equip: BAR, compound: true },
-  { id: 'remo-pecho-apoyado', name: 'Remo con pecho apoyado', slot: 'remo', kind: 'mancuerna', equip: ALL, compound: true },
+  // Tirón horizontal (espalda 1, bíceps y deltoides posterior 0,5)
+  { id: 'remo-barra', name: 'Remo con barra', slot: 'remo', pattern: 'tironH', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
+  { id: 'remo-polea', name: 'Remo en polea baja', slot: 'remo', pattern: 'tironH', kind: 'maquina', equip: GYM, compound: true },
+  { id: 'remo-pecho-apoyado', name: 'Remo con pecho apoyado', slot: 'remo', pattern: 'tironH', kind: 'mancuerna', equip: ALL, compound: true },
+  { id: 'remo-t', name: 'Remo en barra T', slot: 'remo', pattern: 'tironH', kind: 'barra', equip: BAR, compound: true, avoid: ['espalda'] },
+  { id: 'remo-inclinado-mancuernas', name: 'Remo inclinado con mancuernas', slot: 'remo', pattern: 'tironH', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['espalda'] },
+  { id: 'remo-mancuerna', name: 'Remo con mancuerna a una mano', slot: 'remo', pattern: 'tironH', kind: 'mancuerna', equip: ALL, compound: true, unilateral: true },
 
-  // Tirón vertical
-  { id: 'jalon', name: 'Jalón al pecho', slot: 'jalon', kind: 'maquina', equip: GYM, compound: true },
-  { id: 'dominadas', name: 'Dominadas', slot: 'jalon', kind: 'corporal', equip: BAR, compound: true },
-  { id: 'jalon-agarre-neutro', name: 'Jalón con agarre neutro', slot: 'jalon', kind: 'maquina', equip: GYM, compound: true },
-  { id: 'remo-inclinado-mancuernas', name: 'Remo inclinado con mancuernas', slot: 'jalon', kind: 'mancuerna', equip: ALL, compound: true },
+  // Tirón vertical (espalda 1, bíceps 0,5)
+  { id: 'jalon', name: 'Jalón al pecho', slot: 'jalon', pattern: 'tironV', kind: 'maquina', equip: GYM, compound: true },
+  { id: 'jalon-agarre-neutro', name: 'Jalón con agarre neutro', slot: 'jalon', pattern: 'tironV', kind: 'maquina', equip: GYM, compound: true },
+  { id: 'dominadas', name: 'Dominadas', slot: 'jalon', pattern: 'tironV', kind: 'corporal', equip: BAR, compound: true },
+  { id: 'pullover-mancuerna', name: 'Pullover con mancuerna', slot: 'jalon', pattern: 'tironV', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['hombro'] },
 
-  // Unilateral
-  { id: 'bulgara', name: 'Sentadilla búlgara', slot: 'unilateral', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['rodilla'] },
-  { id: 'zancadas', name: 'Zancadas caminando', slot: 'unilateral', kind: 'mancuerna', equip: ALL, compound: true, avoid: ['rodilla'] },
-  { id: 'step-up', name: 'Subida al cajón', slot: 'unilateral', kind: 'mancuerna', equip: ALL, compound: true },
+  // Aislamiento de pierna
+  { id: 'extension-cuadriceps', name: 'Extensión de cuádriceps', slot: 'cuadriceps', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['cuadriceps'] },
+  { id: 'curl-femoral', name: 'Curl femoral', slot: 'femoral', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['femoral'] },
+  { id: 'curl-femoral-mancuerna', name: 'Curl femoral tumbado con mancuerna', slot: 'femoral', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['femoral'] },
+  { id: 'gemelo-maquina', name: 'Elevación de talones en máquina', slot: 'gemelo', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['gemelo'] },
+  { id: 'gemelo-mancuerna', name: 'Elevación de talones con mancuerna', slot: 'gemelo', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['gemelo'] },
 
-  // Aislamiento pierna
-  { id: 'extension-cuadriceps', name: 'Extensión de cuádriceps', slot: 'cuadriceps', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'goblet-pausa', name: 'Sentadilla goblet con pausa', slot: 'cuadriceps', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['rodilla'] },
-  { id: 'step-up-bajo', name: 'Subida al cajón bajo', slot: 'cuadriceps', kind: 'mancuerna', equip: ALL, compound: false },
-  { id: 'curl-femoral', name: 'Curl femoral', slot: 'femoral', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'rumano-una-pierna', name: 'Peso muerto a una pierna', slot: 'femoral', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['espalda'] },
-  { id: 'puente-una-pierna', name: 'Puente de glúteo a una pierna', slot: 'femoral', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['gluteo', 'femoral'] },
-  { id: 'gemelo-maquina', name: 'Elevación de talones en máquina', slot: 'gemelo', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'gemelo-mancuerna', name: 'Elevación de talones con mancuerna', slot: 'gemelo', kind: 'mancuerna', equip: ALL, compound: false },
+  // Aislamiento de torso
+  { id: 'aperturas-maquina', name: 'Aperturas en máquina', slot: 'pecho', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['pecho'] },
+  { id: 'cruce-poleas', name: 'Cruce de poleas', slot: 'pecho', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['pecho'] },
+  { id: 'aperturas-mancuernas', name: 'Aperturas con mancuernas', slot: 'pecho', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'], muscles: ['pecho'] },
+  { id: 'elevaciones-laterales', name: 'Elevaciones laterales', slot: 'lateral', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['deltLateral'] },
+  { id: 'laterales-polea', name: 'Elevaciones laterales en polea', slot: 'lateral', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, unilateral: true, muscles: ['deltLateral'] },
+  { id: 'lateral-sustituto', name: 'Elevaciones laterales con mancuernas', slot: 'lateral', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, legacy: true, muscles: ['deltLateral'] },
+  { id: 'face-pull', name: 'Face pull en polea', slot: 'posterior', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['deltPosterior'] },
+  { id: 'pajaros-maquina', name: 'Pájaros en máquina', slot: 'posterior', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['deltPosterior'] },
+  { id: 'pajaros', name: 'Pájaros con mancuernas', slot: 'posterior', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['deltPosterior'] },
+  { id: 'curl-mancuernas', name: 'Curl de bíceps con mancuernas', slot: 'biceps', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['biceps'] },
+  { id: 'curl-predicador', name: 'Curl predicador', slot: 'biceps', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['biceps'] },
+  { id: 'curl-martillo', name: 'Curl martillo', slot: 'biceps', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['biceps'] },
+  { id: 'curl-barra', name: 'Curl de bíceps con barra', slot: 'biceps', pattern: 'aislamiento', kind: 'barra', equip: BAR, compound: false, muscles: ['biceps'] },
+  { id: 'triceps-polea', name: 'Extensión de tríceps en polea', slot: 'triceps', pattern: 'aislamiento', kind: 'maquina', equip: GYM, compound: false, muscles: ['triceps'] },
+  { id: 'frances-mancuernas', name: 'Press francés con mancuernas', slot: 'triceps', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, muscles: ['triceps'] },
+  { id: 'triceps-sobre-cabeza', name: 'Extensión de tríceps sobre la cabeza', slot: 'triceps', pattern: 'aislamiento', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'], muscles: ['triceps'] },
 
-  // Aislamiento torso
-  { id: 'aperturas-maquina', name: 'Aperturas en máquina', slot: 'pecho', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'aperturas-mancuernas', name: 'Aperturas con mancuernas', slot: 'pecho', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'] },
-  { id: 'cruce-poleas', name: 'Cruce de poleas', slot: 'pecho', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'elevaciones-laterales', name: 'Elevaciones laterales', slot: 'lateral', kind: 'mancuerna', equip: ALL, compound: false },
-  { id: 'face-pull', name: 'Face pull en polea', slot: 'lateral', kind: 'maquina', equip: GYM, compound: false, muscles: ['hombro', 'espalda'] },
-  { id: 'laterales-polea', name: 'Elevaciones laterales en polea', slot: 'lateral', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'curl-mancuernas', name: 'Curl de bíceps con mancuernas', slot: 'biceps', kind: 'mancuerna', equip: ALL, compound: false },
-  { id: 'curl-barra', name: 'Curl de bíceps con barra', slot: 'biceps', kind: 'barra', equip: BAR, compound: false },
-  { id: 'curl-predicador', name: 'Curl predicador', slot: 'biceps', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'curl-martillo', name: 'Curl martillo', slot: 'biceps', kind: 'mancuerna', equip: ALL, compound: false },
-  { id: 'triceps-polea', name: 'Extensión de tríceps en polea', slot: 'triceps', kind: 'maquina', equip: GYM, compound: false },
-  { id: 'frances-mancuernas', name: 'Press francés con mancuernas', slot: 'triceps', kind: 'mancuerna', equip: ALL, compound: false },
-  { id: 'triceps-sobre-cabeza', name: 'Extensión de tríceps sobre la cabeza', slot: 'triceps', kind: 'mancuerna', equip: ALL, compound: false, avoid: ['hombro'] },
-  { id: 'fondos', name: 'Fondos en paralelas', slot: 'triceps', kind: 'corporal', equip: BAR, compound: true, avoid: ['hombro'], muscles: ['triceps', 'pecho', 'hombro'] },
+  // Core (tabla 6: anti-extensión y anti-rotación o lateral)
+  { id: 'dead-bug', name: 'Dead bug', slot: 'core', pattern: 'core', kind: 'corporal', equip: ALL, compound: false, coreType: 'antiExtension', muscles: ['core'] },
+  { id: 'pallof', name: 'Pallof press en polea', slot: 'core', pattern: 'core', kind: 'maquina', equip: GYM, compound: false, unilateral: true, coreType: 'antiRotacion', muscles: ['core'] },
+  { id: 'bird-dog', name: 'Bird dog', slot: 'core', pattern: 'core', kind: 'corporal', equip: ALL, compound: false, unilateral: true, coreType: 'antiRotacion', muscles: ['core'] },
+  { id: 'crunch-polea', name: 'Crunch en polea', slot: 'core', pattern: 'core', kind: 'maquina', equip: GYM, compound: false, coreType: 'flexion', avoid: ['espalda'], muscles: ['core'] },
+  { id: 'plancha', name: 'Plancha (segundos)', slot: 'core', pattern: 'core', kind: 'corporal', equip: ALL, compound: false, hold: true, coreType: 'antiExtension', muscles: ['core'] },
+  { id: 'plancha-lateral', name: 'Plancha lateral (segundos)', slot: 'core', pattern: 'core', kind: 'corporal', equip: ALL, compound: false, hold: true, unilateral: true, coreType: 'lateral', muscles: ['core'] },
 ]
 
-const SLOT_MUSCLES: Record<Slot, Muscle[]> = {
-  sentadilla: ['cuadriceps', 'gluteo'],
-  bisagra: ['femoral', 'gluteo'],
-  pressHorizontal: ['pecho', 'triceps', 'hombro'],
-  pressVertical: ['hombro', 'triceps'],
-  remo: ['espalda', 'biceps'],
-  jalon: ['espalda', 'biceps'],
-  unilateral: ['cuadriceps', 'gluteo'],
-  cuadriceps: ['cuadriceps'],
-  femoral: ['femoral'],
-  gemelo: ['gemelo'],
-  pecho: ['pecho'],
-  lateral: ['hombro'],
-  biceps: ['biceps'],
-  triceps: ['triceps'],
+/** Fractional sets each pattern gives (table 1b): 1 for the main target, 0.5 for secondary muscles. */
+export const PATTERN_MUSCLES: Record<Exclude<Pattern, 'aislamiento' | 'core'>, Partial<Record<Muscle, number>>> = {
+  sentadilla: { cuadriceps: 1, gluteo: 0.5 },
+  bisagra: { femoral: 1, gluteo: 0.5 },
+  empujeH: { pecho: 1, triceps: 0.5, deltAnterior: 0.5 },
+  empujeV: { deltAnterior: 1, triceps: 0.5, deltLateral: 0.5 },
+  tironH: { espalda: 1, biceps: 0.5, deltPosterior: 0.5 },
+  tironV: { espalda: 1, biceps: 0.5 },
+  hipThrust: { gluteo: 1 },
 }
+
+export const MUSCLES: Muscle[] = [
+  'cuadriceps',
+  'gluteo',
+  'femoral',
+  'gemelo',
+  'pecho',
+  'espalda',
+  'deltAnterior',
+  'deltLateral',
+  'deltPosterior',
+  'biceps',
+  'triceps',
+  'core',
+]
 
 export const MUSCLE_NAMES: Record<Muscle, string> = {
   cuadriceps: 'cuádriceps',
@@ -105,23 +129,51 @@ export const MUSCLE_NAMES: Record<Muscle, string> = {
   gemelo: 'gemelos',
   pecho: 'pecho',
   espalda: 'espalda',
-  hombro: 'hombros',
+  deltAnterior: 'hombro anterior',
+  deltLateral: 'hombro lateral',
+  deltPosterior: 'hombro posterior',
   biceps: 'bíceps',
   triceps: 'tríceps',
+  core: 'core',
 }
 
 /** Order used to group the exercise picker, from the main target muscle. */
-export const MUSCLE_ORDER: Muscle[] = ['pecho', 'espalda', 'hombro', 'cuadriceps', 'gluteo', 'femoral', 'gemelo', 'biceps', 'triceps']
+export const MUSCLE_ORDER: Muscle[] = [
+  'pecho',
+  'espalda',
+  'deltAnterior',
+  'deltLateral',
+  'deltPosterior',
+  'cuadriceps',
+  'gluteo',
+  'femoral',
+  'gemelo',
+  'biceps',
+  'triceps',
+  'core',
+]
 
+/** Fractional sets one set of this exercise gives each muscle. */
+export function contributions(exercise: Exercise): Partial<Record<Muscle, number>> {
+  if (exercise.pattern === 'aislamiento' || exercise.pattern === 'core') {
+    const target = exercise.muscles?.[0] ?? (exercise.pattern === 'core' ? 'core' : undefined)
+    return target ? { [target]: 1 } : {}
+  }
+  return PATTERN_MUSCLES[exercise.pattern]
+}
+
+/** Muscles worked, main target first. */
 export function musclesOf(exercise: Exercise): Muscle[] {
-  return exercise.muscles ?? SLOT_MUSCLES[exercise.slot]
+  if (exercise.unknown) return []
+  const c = contributions(exercise)
+  return MUSCLES.filter((m) => c[m] !== undefined).sort((a, b) => (c[b] ?? 0) - (c[a] ?? 0))
 }
 
 export function mainMuscle(exercise: Exercise): Muscle {
   return musclesOf(exercise)[0]
 }
 
-/** "pecho, tríceps y hombros" */
+/** "pecho, tríceps y hombro anterior" */
 export function listMuscles(muscles: Muscle[]): string {
   const names = muscles.map((m) => MUSCLE_NAMES[m])
   if (names.length <= 1) return names.join('')
@@ -132,6 +184,11 @@ export function isAvoided(exercise: Exercise, injuries: Injury[]): Injury[] {
   return (exercise.avoid ?? []).filter((i) => injuries.includes(i))
 }
 
+/** Barbell exercises count as free barbell work (tables 3, 7b and 11b). */
+export function isFreeBarbell(exercise: Exercise): boolean {
+  return exercise.kind === 'barra'
+}
+
 const BY_ID = new Map(EXERCISES.map((e) => [e.id, e]))
 const LIBRARY_IDS = new Set(EXERCISES.map((e) => e.id))
 let CUSTOM: Exercise[] = []
@@ -140,24 +197,46 @@ let CUSTOM: Exercise[] = []
 const SLOT_FOR_MUSCLE: Record<Muscle, Slot> = {
   pecho: 'pecho',
   espalda: 'remo',
-  hombro: 'lateral',
+  deltAnterior: 'pressVertical',
+  deltLateral: 'lateral',
+  deltPosterior: 'posterior',
   cuadriceps: 'cuadriceps',
-  gluteo: 'bisagra',
+  gluteo: 'gluteo',
   femoral: 'femoral',
   gemelo: 'gemelo',
   biceps: 'biceps',
   triceps: 'triceps',
+  core: 'core',
+}
+
+/** Pattern of a user-made compound, from its main muscle (table 1b). */
+const COMPOUND_PATTERN: Partial<Record<Muscle, Pattern>> = {
+  pecho: 'empujeH',
+  espalda: 'tironH',
+  deltAnterior: 'empujeV',
+  cuadriceps: 'sentadilla',
+  femoral: 'bisagra',
+  gluteo: 'hipThrust',
+}
+
+/** "hombro" was a single muscle until v0.4; it now means the lateral deltoid. */
+export function normalizeMuscle(muscle: string): Muscle | null {
+  if (muscle === 'hombro') return 'deltLateral'
+  return (MUSCLES as string[]).includes(muscle) ? (muscle as Muscle) : null
 }
 
 export function fromCustom(c: CustomExercise): Exercise {
+  const muscle = normalizeMuscle(c.muscle) ?? 'pecho'
+  const pattern: Pattern = muscle === 'core' ? 'core' : c.compound ? (COMPOUND_PATTERN[muscle] ?? 'aislamiento') : 'aislamiento'
   return {
     id: c.id,
     name: c.name,
-    slot: SLOT_FOR_MUSCLE[c.muscle],
+    slot: SLOT_FOR_MUSCLE[muscle],
+    pattern,
     kind: c.kind,
     equip: ['gimnasio', 'basico', 'casa'],
     compound: c.compound,
-    muscles: [c.muscle],
+    muscles: [muscle],
     custom: true,
   }
 }
@@ -172,7 +251,7 @@ function isCustomExercise(c: unknown): c is CustomExercise {
     typeof x.kind === 'string' &&
     ['barra', 'mancuerna', 'maquina', 'corporal'].includes(x.kind) &&
     typeof x.muscle === 'string' &&
-    x.muscle in SLOT_FOR_MUSCLE &&
+    normalizeMuscle(x.muscle) !== null &&
     !LIBRARY_IDS.has(x.id)
   )
 }
@@ -211,6 +290,7 @@ export function unknownExercise(id: string): Exercise {
     id,
     name: 'Ejercicio no encontrado',
     slot: 'pecho',
+    pattern: 'aislamiento',
     kind: 'maquina',
     equip: ['gimnasio', 'basico', 'casa'],
     compound: false,
@@ -221,11 +301,4 @@ export function unknownExercise(id: string): Exercise {
 
 export function findExercise(id: string): Exercise | undefined {
   return BY_ID.get(id)
-}
-
-/** Exercises that fit a slot for this equipment, skipping those flagged for the user's injuries. */
-export function optionsForSlot(slot: Slot, equipment: Equipment, injuries: Injury[]): Exercise[] {
-  const fits = EXERCISES.filter((e) => e.slot === slot && e.equip.includes(equipment))
-  const safe = fits.filter((e) => !e.avoid?.some((i) => injuries.includes(i)))
-  return safe.length > 0 ? safe : fits
 }

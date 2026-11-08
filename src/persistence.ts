@@ -106,9 +106,12 @@ const MUSCLES: Record<Muscle, true> = {
   gemelo: true,
   pecho: true,
   espalda: true,
-  hombro: true,
+  deltAnterior: true,
+  deltLateral: true,
+  deltPosterior: true,
   biceps: true,
   triceps: true,
+  core: true,
 }
 const SLOTS: Record<Slot, true> = {
   sentadilla: true,
@@ -125,6 +128,9 @@ const SLOTS: Record<Slot, true> = {
   lateral: true,
   biceps: true,
   triceps: true,
+  posterior: true,
+  gluteo: true,
+  core: true,
 }
 const MODES: Record<PrescriptionMode, true> = {
   calibracion: true,
@@ -218,7 +224,11 @@ function parsePlanExercise(v: unknown, report: Report): PlanExercise | null {
     return null
   }
   report.unknownExercises.add(v.exerciseId)
-  return { exerciseId: v.exerciseId, slot: v.slot, role: v.role, sets: v.sets, repMin: v.repMin, repMax: v.repMax, rest: v.rest }
+  const out: PlanExercise = { exerciseId: v.exerciseId, slot: v.slot, role: v.role, sets: v.sets, repMin: v.repMin, repMax: v.repMax, rest: v.rest }
+  // Added in v0.5 by the rules engine; plans made before keep working without them.
+  if (isInt(v.rir, 0, 10)) out.rir = v.rir
+  if (isStr(v.superset) && /^[A-Z]$/.test(v.superset)) out.superset = v.superset
+  return out
 }
 
 function parsePlanExercises(v: unknown, report: Report): PlanExercise[] | null {
@@ -295,6 +305,8 @@ function parseSettings(v: unknown): Settings {
     incMancuerna: inc(s.incMancuerna, DEFAULT_SETTINGS.incMancuerna),
     incMaquina: inc(s.incMaquina, DEFAULT_SETTINGS.incMaquina),
     sessionView: s.sessionView === 'lista' ? 'lista' : 'enfoque',
+    // Only stored when turned off; missing means on.
+    ...(s.capStrengthDays === false ? { capStrengthDays: false } : {}),
   }
 }
 

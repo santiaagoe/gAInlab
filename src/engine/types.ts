@@ -23,6 +23,24 @@ export type Slot =
   | 'lateral'
   | 'biceps'
   | 'triceps'
+  | 'posterior'
+  | 'gluteo'
+  | 'core'
+
+/** Movement pattern (tables 1b and 7a of docs/reglas-entrenamiento.md). */
+export type Pattern =
+  | 'sentadilla'
+  | 'bisagra'
+  | 'empujeH'
+  | 'empujeV'
+  | 'tironH'
+  | 'tironV'
+  | 'hipThrust'
+  | 'aislamiento'
+  | 'core'
+
+/** Type of core exercise (table 6). */
+export type CoreType = 'antiExtension' | 'antiRotacion' | 'lateral' | 'flexion'
 
 export type Muscle =
   | 'cuadriceps'
@@ -31,9 +49,12 @@ export type Muscle =
   | 'gemelo'
   | 'pecho'
   | 'espalda'
-  | 'hombro'
+  | 'deltAnterior'
+  | 'deltLateral'
+  | 'deltPosterior'
   | 'biceps'
   | 'triceps'
+  | 'core'
 
 export interface Profile {
   goal: Goal
@@ -55,9 +76,18 @@ export interface Exercise {
   kind: Kind
   equip: Equipment[]
   compound: boolean
+  /** Movement pattern; decides how the sets count for each muscle (table 1b). */
+  pattern: Pattern
   avoid?: Injury[]
-  /** Overrides the slot's default muscles; the first one is the main target. */
+  /** Main target of an isolation exercise; for compounds the pattern decides. */
   muscles?: Muscle[]
+  /** One side at a time: a set takes twice as long (table 4b). */
+  unilateral?: boolean
+  coreType?: CoreType
+  /** Timed hold: the "reps" are seconds. The generator does not pick these. */
+  hold?: boolean
+  /** Kept so saved plans still find it, but the generator does not pick it. */
+  legacy?: boolean
   /** Created by the user. */
   custom?: boolean
   /** Placeholder for an id that is not in the library. */
@@ -81,6 +111,10 @@ export interface PlanExercise {
   repMin: number
   repMax: number
   rest: number
+  /** Target reps in reserve at the end of each set (table 3). Missing in plans made before v0.5. */
+  rir?: number
+  /** Exercises sharing this letter are done as a superset, alternating sets (table 8b). */
+  superset?: string
 }
 
 export interface PlanDay {
@@ -130,6 +164,8 @@ export interface Settings {
   incMaquina: number
   /** How a session is shown: one exercise at a time, or all in a list. */
   sessionView: 'enfoque' | 'lista'
+  /** Caps strength days by experience (table 5a); extra days are rest or cardio. Missing means on. */
+  capStrengthDays?: boolean
 }
 
 export type PrescriptionMode =
