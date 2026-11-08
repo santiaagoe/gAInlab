@@ -99,13 +99,15 @@ describe('store: sessions', () => {
     store.actions.completeOnboarding(profile)
     store.actions.startSession(store.getState().plan!.days[0])
     const spy = vi.spyOn(storage, 'setItem')
-    store.actions.updateSets(0, [
-      { index: 0, patch: { weight: 40 } },
-      { index: 1, patch: { weight: 40 } },
-      { index: 2, patch: { weight: 40 } },
-    ])
+    // As many sets as the plan gives the first exercise (the rules engine decides how many).
+    const count = store.getState().active!.exercises[0].sets.length
+    expect(count).toBeGreaterThanOrEqual(2)
+    store.actions.updateSets(
+      0,
+      Array.from({ length: count }, (_, index) => ({ index, patch: { weight: 40 } })),
+    )
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(store.getState().active!.exercises[0].sets.map((s) => s.weight)).toEqual([40, 40, 40])
+    expect(store.getState().active!.exercises[0].sets.map((s) => s.weight)).toEqual(Array(count).fill(40))
   })
 })
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { generatePlan } from './generator'
 import { buildPlan } from './plan'
 import { getExercise } from './exercises'
 import { prescribe, roundDown, roundTo, warmupSets, type HistoryEntry } from './progression'
@@ -107,10 +108,11 @@ describe('buildPlan', () => {
     createdAt: now.toISOString(),
   }
 
-  it('builds one day per training day with unique exercises', () => {
+  it('builds one day per training day, up to the strength-day cap, with unique exercises', () => {
+    // Table 5a: < 1 year trains at most 4 strength days; the extra days are rest or cardio.
     for (const days of [2, 3, 4, 5, 6]) {
       const plan = buildPlan({ ...base, days })
-      expect(plan.days).toHaveLength(days)
+      expect(plan.days).toHaveLength(Math.min(days, 4))
       for (const day of plan.days) {
         const ids = day.exercises.map((e) => e.exerciseId)
         expect(new Set(ids).size).toBe(ids.length)
@@ -120,9 +122,10 @@ describe('buildPlan', () => {
   })
 
   it('respects time limits and equipment', () => {
-    const plan = buildPlan({ ...base, minutes: 30, equipment: 'casa' })
-    for (const day of plan.days) {
-      expect(day.exercises.length).toBeLessThanOrEqual(3)
+    // The time limit is the estimated duration (formula 4b), not a fixed number of exercises.
+    const result = generatePlan({ ...base, minutes: 30, equipment: 'casa' })
+    for (const day of result.days) expect(day.minutes).toBeLessThanOrEqual(30)
+    for (const day of result.plan.days) {
       for (const e of day.exercises) expect(getExercise(e.exerciseId).equip).toContain('casa')
     }
   })
@@ -138,9 +141,13 @@ describe('buildPlan', () => {
   })
 
   it('uses low reps for strength', () => {
+    // Table 3, strength: < 1 year 5–8 in compounds, > 1 year 3–6.
     const plan = buildPlan({ ...base, goal: 'fuerza' })
     const main = plan.days[0].exercises.find((e) => e.role === 'principal')!
-    expect(main.repMax).toBeLessThanOrEqual(6)
+    expect([main.repMin, main.repMax]).toEqual([5, 8])
+    const advanced = buildPlan({ ...base, goal: 'fuerza', experience: 'mas1' })
+    const top = advanced.days[0].exercises.find((e) => e.role === 'principal')!
+    expect([top.repMin, top.repMax]).toEqual([3, 6])
   })
 })
 

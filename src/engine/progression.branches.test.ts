@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildPlan } from './plan'
+import { updateExercise } from './planEdit'
 import { prescribe, type HistoryEntry } from './progression'
 import { prescriptionFor } from './session'
 import type { AgeGroup, ExerciseLog, Feel, PlanExercise, Profile, Session, Settings } from './types'
@@ -65,12 +66,16 @@ describe('A1: an exercise done on two days with different doses', () => {
       injuries: [],
       createdAt: '2026-01-01T00:00:00Z',
     }
-    const plan = buildPlan(profile)
-    // Find an exercise that the generator put on two days with different rep ranges.
-    const entries = plan.days.flatMap((d) => d.exercises)
-    const repeated = entries.find((e) => entries.some((o) => o !== e && o.exerciseId === e.exerciseId && o.repMax !== e.repMax))
-    expect(repeated).toBeDefined()
-    const id = repeated!.exerciseId
+    const generated = buildPlan(profile)
+    // The strength plan repeats its main lifts on two days with the same dose (table 3). The person then gives one
+    // of them a lighter dose by hand, as the plan editor allows.
+    const days = generated.days.map((d) => ({ d, i: d.exercises.findIndex((e) => e.role === 'principal') }))
+    const id = generated.days[0].exercises[days[0].i].exerciseId
+    const [first, second] = days.filter(({ d, i }) => d.exercises[i]?.exerciseId === id)
+    expect(first.d.id).not.toBe(second.d.id)
+    const plan = updateExercise(generated, second.d.id, second.i, { sets: 3, repMin: 6, repMax: 10 })
+    const entries = plan.days.flatMap((d) => d.exercises).filter((e) => e.exerciseId === id)
+    expect(new Set(entries.map((e) => e.repMax)).size).toBe(2)
 
     const sessions: Session[] = []
     const weights: number[] = []

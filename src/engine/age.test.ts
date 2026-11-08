@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ageRules, ageSummary } from './age'
 import { getExercise } from './exercises'
 import { buildPlan } from './plan'
+import { contextFor, restRange } from './targets'
 import { prescribe, warmupSets, type HistoryEntry } from './progression'
 import type { AgeGroup, ExerciseLog, Feel, PlanExercise, Profile, Settings } from './types'
 
@@ -76,13 +77,21 @@ describe('age in plans', () => {
     expect(main.sets).toBeLessThanOrEqual(3)
     const teen = buildPlan(profile('menor', { goal: 'fuerza' }))
     expect(teen.days[0].exercises.find((e) => e.role === 'principal')!.repMin).toBeGreaterThanOrEqual(6)
+    // Table 3: strength, < 1 year, compounds 5–8.
     const adult = buildPlan(profile('30-39', { goal: 'fuerza' }))
-    expect(adult.days[0].exercises.find((e) => e.role === 'principal')!.repMin).toBe(4)
+    expect(adult.days[0].exercises.find((e) => e.role === 'principal')!.repMin).toBe(5)
   })
 
   it('adds rest between sets with age', () => {
-    const young = buildPlan(profile('18-29')).days[0].exercises.find((e) => e.role === 'principal')!.rest
-    const older = buildPlan(profile('50-59')).days[0].exercises.find((e) => e.role === 'principal')!.rest
+    // Compared on the rest ranges: a plan short of time lowers rest inside the range (table 8a, step 3).
+    const bench = getExercise('banca-barra')
+    const rest = (age: AgeGroup) => restRange(contextFor(profile(age)), bench)
+    expect(rest('50-59').min).toBe(rest('18-29').min + 30)
+    expect(rest('50-59').def).toBe(rest('18-29').def + 30)
+    expect(rest('70+').def).toBe(rest('18-29').def + 60)
+    // With time to spare the plan uses the default rest.
+    const young = buildPlan(profile('18-29', { minutes: 90 })).days[0].exercises.find((e) => e.role === 'principal')!.rest
+    const older = buildPlan(profile('50-59', { minutes: 90 })).days[0].exercises.find((e) => e.role === 'principal')!.rest
     expect(older).toBe(young + 30)
   })
 
