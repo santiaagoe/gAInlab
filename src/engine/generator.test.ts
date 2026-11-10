@@ -224,3 +224,51 @@ describe('revisión de cobertura de un plan existente', () => {
     expect(generated).toMatchObject({ mode: 'completo', belowMin: [], aboveMax: [], lowFrequency: [], missingPatterns: [] })
   })
 })
+
+describe('descanso largo en sesiones de 60 minutos o más (v0.5.1)', () => {
+  const entries = (plan: Plan) => plan.days.map((d) => d.exercises.map((e) => ({ e, ex: getExercise(e.exerciseId) })))
+
+  it('hipertrofia 4 × 60: pesados 150 s, compuestos 120 s y aislamientos 90 s, sin recortar descanso', () => {
+    const r = generatePlan(profileOf({ days: 4, minutes: 60 }))
+    expect(r.mode).toBe('completo')
+    expect(r.belowMin).toEqual([])
+    for (const day of entries(r.plan)) {
+      const compounds = day.filter(({ ex, e }) => ex.compound && !e.superset)
+      compounds.forEach(({ e }, i) => expect(e.rest).toBe(i < 2 ? 150 : 120))
+      for (const { e } of day.filter(({ ex, e }) => !ex.compound && !e.superset)) expect(e.rest).toBe(90)
+    }
+    for (const d of r.days) expect(d.minutes).toBeLessThanOrEqual(60)
+  })
+
+  it('el curl femoral (flexión de rodilla) aparece en dos sesiones, igual que la bisagra', () => {
+    const r = generatePlan(profileOf({ days: 4, minutes: 60 }))
+    const days = entries(r.plan).filter((day) => day.some(({ ex }) => ex.pattern === 'aislamiento' && ex.muscles?.[0] === 'femoral'))
+    expect(days.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('pérdida de grasa también conserva el descanso en 60 minutos', () => {
+    const r = generatePlan(profileOf({ goal: 'grasa', days: 4, minutes: 60 }))
+    const first = entries(r.plan)[0].find(({ ex }) => ex.compound)!
+    expect(first.e.rest).toBe(150)
+  })
+
+  it('con 45 minutos sigue la tabla 8a: no hay descansos de 150 s y el descanso puede bajar', () => {
+    const r = generatePlan(profileOf({ days: 4, minutes: 45 }))
+    expect(r.mode).toBe('completo')
+    for (const day of entries(r.plan)) for (const { e } of day) expect(e.rest).toBeLessThan(150)
+    expect(entries(r.plan).flat().some(({ e, ex }) => ex.compound && e.rest < 120)).toBe(true)
+  })
+
+  it('fuerza no cambia: el principal descansa 180 s', () => {
+    const r = generatePlan(profileOf({ goal: 'fuerza', days: 4, minutes: 60 }))
+    const main = entries(r.plan)[0].find(({ ex }) => ex.compound)!
+    expect(main.e.rest).toBe(180)
+  })
+
+  it('el descanso extra por edad se suma a los pesados y sigue dentro de la tabla 4a', () => {
+    const r = generatePlan(profileOf({ days: 4, minutes: 75, age: '60-69', experience: 'mas1' }))
+    expect(validatePlan(r)).toEqual([])
+    const first = entries(r.plan)[0].find(({ ex }) => ex.compound)!
+    expect(first.e.rest).toBe(180)
+  })
+})
