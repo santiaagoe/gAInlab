@@ -1,5 +1,40 @@
 # Revisión — gAInlab
 
+## v0.5.1 · Descanso largo y curl femoral (2026-11-09)
+
+Alcance: ajuste del generador tras revisar la rutina de hipertrofia de 4 días y 60 minutos (rama `ajuste-descanso-compuestos`). Solo cambia el motor: no hay cambios de interfaz ni de formato de datos, y los planes ya guardados no se modifican.
+
+### Qué cambió
+- **Descanso largo** (`LONG_REST` y `HEAVY_REST` en `rules.ts`): en hipertrofia y pérdida de grasa con sesiones de **60 minutos o más**, el generador ya no recorta el descanso para caber en el tiempo (se omite el paso 3 de la tabla 8a) y quita series en su lugar, siempre respetando el mínimo de 1a. Los dos primeros compuestos de cada día (los pesados) descansan 150 s, el resto de compuestos 120 s y los aislamientos 90 s. Con descanso extra por edad, se suma igual que antes.
+- **Curl femoral en dos sesiones** (`seedIsolation`): la flexión de rodilla se siembra en dos días, para que quede a la par de la bisagra de cadera (tabla 6).
+- **Sin cambios**: sesiones de menos de 60 minutos (siguen la tabla 8a tal como está, así que la tabla 9c no cambia), fuerza, salud, progresión y edad.
+
+### Efecto en una encuesta de hipertrofia, menos de 1 año, 4 × 60, gimnasio
+| | Antes | Ahora |
+|---|---|---|
+| Descanso en compuestos | 120 s (115 s en Torso B) | 150 s los 2 primeros, 120 s el resto |
+| Descanso en aislamientos | 90 s (85 s en Torso B) | 90 s |
+| Hombro lateral | 11 series por semana | 8 (el mínimo de 1a) |
+| Curl femoral | 1 día | 2 días |
+| Pierna B | 49 min | 59 min |
+
+Todos los músculos siguen entre el mínimo y el máximo de 1a, y el plan sigue siendo completo.
+
+### Por qué
+Con el descanso recortado, el generador mantenía el volumen por defecto y bajaba el descanso hasta el piso de la tabla 8a. Schoenfeld 2016 (21 hombres entrenados, 8 semanas) obtuvo más fuerza y más grosor muscular con 3 minutos que con 1 minuto. Singer 2024 (metaanálisis de 9 estudios, solo personas sin entrenamiento) ve un beneficio pequeño por encima de 60 s y ninguno por encima de 90 s, con intervalos que cruzan el cero. Los estudios no se contradicen del todo, y 150 s sigue dentro del rango de 4a (90–180 s), así que la regla de validación 8 se cumple. Es una decisión del autor: la nota de 4a del documento dice que más de 90 s no muestra diferencia apreciable, y conviene reflejar la nueva fila de "compuestos pesados" en `docs/reglas-entrenamiento.md`.
+
+### Verificación
+- `npm test`: 24 archivos y 288 tests sin errores (282 anteriores y 6 nuevos en `generator.test.ts`). Las 17 reglas de validación pasan en las 50.400 encuestas.
+- `npm run build` sin errores. `npm run lint` solo muestra las advertencias de `Date.now` que ya existían en `Session.tsx` y `Today.tsx`.
+- **No** se probó en el celular (390 px): el cambio es solo del motor, pero conviene generar un plan nuevo y revisar los descansos antes de subir a `main`.
+
+### Decisiones y lo que no se hizo
+- **Un solo ejercicio de gemelos por día**: no se hizo. La regla 5 limita cada ejercicio a 4 series, y con más de 1 año de experiencia el mínimo de 10 series semanales no se alcanzaría con dos sesiones de pierna. Pierna B puede traer dos ejercicios de gemelos.
+- **Superseries** de laterales con curl o de face pull con tríceps: el motor no las permite (solo pares antagonistas de 8b).
+- **Pendientes**: semanas 1–2 de adaptación con una serie menos por ejercicio, subida de volumen cada 2 semanas y última serie de aislamientos en máquina a RIR 1 desde la semana 5, que ya estaban en la lista de pendientes de v0.5.
+
+---
+
 ## v0.5 · Motor de reglas (2026-11-08)
 
 Alcance: reemplazo del generador de rutinas por un motor basado en `docs/reglas-entrenamiento.md` (rama `motor-reglas`, 4 commits). La revisión anterior (2026-10-29) está más abajo como historial.

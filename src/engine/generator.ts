@@ -8,6 +8,8 @@ import {
   DAY_MUSCLES,
   DAY_PATTERNS,
   DURATION,
+  HEAVY_REST,
+  LONG_REST,
   MIN_DIRECT_SETS_IN_SESSION,
   RATIOS,
   REDUCED_FLOOR,
@@ -559,19 +561,39 @@ function cachedDose(ctx: Context, ex: Exercise) {
   return d
 }
 
-function restOf(state: State, day: Day, e: Entry): number {
+/** Hypertrophy and fat loss with sessions of 60+ minutes keep their rest: sets are cut instead (see LONG_REST). */
+function keepsRest(ctx: Context): boolean {
+  return LONG_REST.goals.includes(ctx.goal) && ctx.profile.minutes >= LONG_REST.fromMinutes
+}
+
+/** The heavy compounds of a day (see HEAVY_REST): its first compounds, in session order. */
+function heavyOf(ctx: Context, ordered: Entry[]): Set<Entry> {
+  if (!keepsRest(ctx)) return new Set()
+  return new Set(ordered.filter((e) => !isIsolation(e.ex) && !e.superset).slice(0, HEAVY_REST.count))
+}
+
+function restOf(state: State, day: Day, e: Entry, heavy = false): number {
   const { ctx } = state
   const dose = cachedDose(ctx, e.ex)
   if (e.superset) return dose.superset.def
-  const r = dose.rest
-  if (day.restCut === 0) return r.def
-  const floor = e.ex.compound ? (ctx.goal === 'fuerza' ? TRIM.minRest.strengthCompound : TRIM.minRest.compound) : TRIM.minRest.isolation
+  const r: RestRule = heavy
+    ? { def: HEAVY_REST.def + ctx.extraRest, min: HEAVY_REST.min + ctx.extraRest, max: HEAVY_REST.max + ctx.extraRest }
+    : dose.rest
+  if (day.restCut === 0 || keepsRest(ctx)) return r.def
+  const floor = heavy
+    ? HEAVY_REST.min
+    : e.ex.compound
+      ? ctx.goal === 'fuerza'
+        ? TRIM.minRest.strengthCompound
+        : TRIM.minRest.compound
+      : TRIM.minRest.isolation
   const low = Math.min(r.def, Math.max(r.min, floor + ctx.extraRest))
   return Math.round((r.def - ((r.def - low) * day.restCut) / REST_STEPS) / 5) * 5
 }
 
 function timed(state: State, day: Day): TimedExercise[] {
   const ordered = orderEntries(state.ctx, day.entries, mainOf(day))
+  const heavy = heavyOf(state.ctx, ordered)
   const seen = new Set<Pattern>()
   return ordered.map((e) => {
     let approach = 0
@@ -580,7 +602,7 @@ function timed(state: State, day: Day): TimedExercise[] {
       approach = day.approach
     }
     const dose = cachedDose(state.ctx, e.ex)
-    return { sets: e.sets, reps: dose.repMax, rest: restOf(state, day, e), unilateral: e.ex.unilateral, approach, superset: e.superset }
+    return { sets: e.sets, reps: dose.repMax, rest: restOf(state, day, e, heavy.has(e)), unilateral: e.ex.unilateral, approach, superset: e.superset }
   })
 }
 
@@ -669,6 +691,8 @@ function quickTrims(state: State, d: number, all = false) {
   day.approach = TRIM.approachSets
   if (!all && fits(state, d)) return
   makeSupersets(state, day)
+  // Long sessions of hypertrophy and fat loss keep their rest: sets are cut instead (see LONG_REST).
+  if (keepsRest(state.ctx)) return
   for (let step = 1; step <= REST_STEPS; step++) {
     if (!all && fits(state, d)) return
     day.restCut = step
@@ -790,9 +814,12 @@ function placeCompound(state: State, pattern: Pattern, days: number[]) {
   })
 }
 
-/** Isolation that tables 7a and 6 ask for: core (2 types, 2 days), knee flexion, rear and side delts, calves twice. */
+/**
+ * Isolation that tables 7a and 6 ask for: core (2 types, 2 days), knee flexion in two sessions (so it keeps level with
+ * the hip hinge, table 6), rear and side delts, calves twice.
+ */
 function seedIsolation(state: State) {
-  const seeds: Muscle[] = ['core', 'core', 'femoral', 'deltPosterior', 'deltLateral', 'gemelo', 'gemelo']
+  const seeds: Muscle[] = ['core', 'core', 'femoral', 'femoral', 'deltPosterior', 'deltLateral', 'gemelo', 'gemelo']
   const seeded = new Map<Muscle, number[]>()
   for (const m of seeds) {
     const used = seeded.get(m) ?? []
@@ -996,6 +1023,7 @@ export function generatePlan(profile: Profile, options: GenerateOptions = {}): G
     kindCount.set(day.kind, n + 1)
     const repeats = ctx.split.days.filter((k) => k === day.kind).length > 1
     const ordered = orderEntries(ctx, day.entries, mainOf(day))
+    const heavy = heavyOf(ctx, ordered)
     const firstCompound = ordered.find((e) => !isIsolation(e.ex))
     const exercises: PlanExercise[] = ordered.map((e) => {
       const dose = doseFor(ctx, e.ex, reduced)
@@ -1007,7 +1035,7 @@ export function generatePlan(profile: Profile, options: GenerateOptions = {}): G
         sets: e.sets,
         repMin: dose.repMin,
         repMax: dose.repMax,
-        rest: restOf(state, day, e),
+        rest: restOf(state, day, e, heavy.has(e)),
         rir: rirFor(ctx, e.ex, reduced),
       }
       if (e.superset) out.superset = e.superset

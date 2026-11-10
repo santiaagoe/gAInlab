@@ -124,6 +124,26 @@ export const SUPERSET_REST: { compound: RestRule; isolation: RestRule } = {
   isolation: { def: 60, min: 45, max: 90 },
 }
 
+/**
+ * Heavy compounds (v0.5.1, decision of the author, not in the first version of the document): where LONG_REST applies,
+ * the first compounds of each day, the ones with the most load, rest longer than the default of 4a.
+ *
+ * Why: Schoenfeld 2016 (21 trained men, 8 weeks) got more strength and muscle thickness with 3 min than with 1 min
+ * between sets; Singer 2024 (meta-analysis of 9 studies, untrained people) finds a small gain above 60 s and none
+ * above 90 s, with intervals that cross zero. The result does not contradict either study and stays inside the
+ * range of 4a (90–180 s), so validation rule 8 still holds. Strength already rests 180 s.
+ */
+export const HEAVY_REST: RestRule & { count: number } = { count: 2, def: 150, min: 120, max: 180 }
+
+/**
+ * Long rest (v0.5.1, decision of the author): in hypertrophy and fat loss, sessions of 60 minutes or more keep the
+ * defaults of 4a (heavy 150 s, compounds 120 s, isolation 90 s). Step 3 of table 8a is skipped there and the
+ * generator goes straight to removing sets (steps 4–6), always keeping the minimum of 1a. Shorter sessions follow
+ * table 8a as written (rest first), so the feasibility table 9c does not change for 30 and 45 minutes.
+ * Strength already keeps 120 s as its floor.
+ */
+export const LONG_REST: { goals: Goal[]; fromMinutes: number } = { goals: ['hipertrofia', 'grasa'], fromMinutes: 60 }
+
 /* ---------- 4b. Duración de la sesión ---------- */
 
 export const DURATION = {
